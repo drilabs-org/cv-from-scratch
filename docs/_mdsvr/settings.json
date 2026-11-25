@@ -1,7 +1,7 @@
 {
   "$schema": "https://mdsvr.js.org/schema/v2.json",
   "site": {
-    "title": "AI nhập môn",
+    "title": "CV nhập môn",
     "description": "Giáo trình và thực hành AI nhập môn",
     "baseUrl": "https://drilabs-org.github.io",
     "language": "vi"
