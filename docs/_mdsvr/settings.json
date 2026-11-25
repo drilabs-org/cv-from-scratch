@@ -3,7 +3,7 @@
   "site": {
     "title": "AI nhập môn",
     "description": "Giáo trình và thực hành AI nhập môn",
-    "baseUrl": "https://satoshiman.github.io",
+    "baseUrl": "https://drilabs-org.github.io",
     "language": "vi"
   },
   "appearance": {
@@ -53,7 +53,7 @@
     }
   },
   "generate": {
-    "basePath": "/ai-2nd-degree-practices",
+    "basePath": "/cv-from-scratch",
     "outputDir": "_html/public"
   }
 }
