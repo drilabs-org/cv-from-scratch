@@ -5,7 +5,7 @@ description: "Giải thích chậm rãi quá trình train model cho người m�
 
 # Training model: hiểu trọn quá trình huấn luyện
 
-Đây là lần đầu bạn train một model thật, nên tài liệu này đi chậm: giải thích training là cái gì, bỏ gì vào, lấy gì ra, đọc kết quả thế nào, rồi mới chạy `src/train.py` từng bước một. Khái niệm nền xem [Lý thuyết](./01-ly-thuyet), code mẫu xem [Thực hành](./02-thuc-hanh).
+Đây là lần đầu bạn train một model thật, nên tài liệu này đi chậm: giải thích training là cái gì, bỏ gì vào, lấy gì ra, đọc kết quả thế nào, rồi mới chạy `backend/app/cvlib/train.py` của CV Playground từng bước một. Khái niệm nền xem [Lý thuyết](./01-ly-thuyet), code mẫu xem [Thực hành](./02-thuc-hanh).
 
 # Phần 1: Hiểu quá trình train
 
@@ -57,7 +57,7 @@ print(list(state.keys()))  # ['features.0.weight', 'features.0.bias', ...]
 ```
 
 > [!CAUTION]
-> File `.pt` **không phải** model hoàn chỉnh, nó chỉ là đống số. Muốn dùng phải có code kiến trúc khớp từng key (`DigitCNN` trong `src/mnist.py`). Đổi kiến trúc dù chỉ một con số trong `nn.Linear(128, 10)` là file weights cũ vứt đi, phải train lại. Đây là lý do `load_model()` trong `mnist.py` luôn dựng `DigitCNN()` trước rồi mới `load_state_dict()`.
+> File `.pt` **không phải** model hoàn chỉnh, nó chỉ là đống số. Muốn dùng phải có code kiến trúc khớp từng key (`DigitCNN` trong `cvlib/mnist.py`). Đổi kiến trúc dù chỉ một con số trong `nn.Linear(128, 10)` là file weights cũ vứt đi, phải train lại. Đây là lý do `load_model()` trong `mnist.py` luôn dựng `DigitCNN()` trước rồi mới `load_state_dict()`.
 
 ### Con số đánh giá
 
@@ -122,46 +122,47 @@ Test acc: 0.9896 (9896/10000)
 ## Những bẫy người mới hay vấp
 
 - **Quên `model.eval()` + `torch.no_grad()` khi đánh giá:** không có thì model vẫn ở chế độ train và tốn thêm bộ nhớ tính gradient vô ích.
-- **Transform khác nhau giữa train và inference:** model học trên ảnh normalize bằng `MNIST_MEAN/STD`, thì lúc predict phải normalize y hệt. Đây là lý do hai hằng số này được export trong `src/mnist.py` để mọi nơi dùng chung.
+- **Transform khác nhau giữa train và inference:** model học trên ảnh normalize bằng `MNIST_MEAN/STD`, thì lúc predict phải normalize y hệt. Đây là lý do hai hằng số này được export trong `cvlib/mnist.py` để mọi nơi dùng chung.
 - **Shuffle test set:** không sai, nhưng vô nghĩa và làm khó so khớp mẫu sai. Chỉ train mới cần shuffle.
 - **Chọn hyperparameters theo test acc:** thử 50 bộ tham số rồi lấy bộ có test acc cao nhất nghĩa là bạn đang "fit" cả tập test. Cách chuẩn là tách thêm tập validation (sẽ gặp ở project sau), còn giờ cứ biết cái bẫy này tồn tại.
 
 # Phần 2: Step by step chạy `train.py`
 
-Toàn bộ phần trên đã được đóng gói sẵn trong `src/train.py`. Giờ chạy thật.
+Toàn bộ phần trên đã được đóng gói sẵn trong `backend/app/cvlib/train.py`. Giờ chạy thật.
 
 ## Bước 0: Môi trường
 
-Cần một virtualenv có `torch`, `torchvision`, `opencv-python`. Nếu đã theo [Thực hành](./02-thuc-hanh) thì bỏ qua:
+Venv của CV Playground đã có sẵn `torch`, `torchvision`, `opencv-python-headless`. Nếu đã theo [Thực hành](./02-thuc-hanh) thì bỏ qua:
 
 ```bash
+cd cv-playground
 python3 -m venv .venv
 source .venv/bin/activate
-pip install torch torchvision opencv-python
+pip install -r requirements.txt
 ```
 
 ## Bước 1: Hiểu cấu trúc project
 
 ```
-02-mnist-chu-so-viet-tay/
-├── data/         # MNIST tu download vao day lan chay dau
-├── models/       # file .pt output cua train
-├── src/
-│   ├── mnist.py  # kien truc DigitCNN + preprocess + load_model + predict
-│   └── train.py  # script train standalone, chay bang command line
-└── docs/
+cv-playground/backend/app/
+├── cvlib/
+│   ├── data/         # MNIST tu download vao day lan chay dau
+│   ├── models/       # file .pt output cua train
+│   ├── mnist.py      # kien truc DigitCNN + preprocess + load_model + predict
+│   └── train.py      # script train standalone, chay bang command line
+└── tasks/
+    └── p2_mnist.py   # task p2-digit wrap mnist.py cho web app
 ```
 
-Tách riêng `mnist.py` (định nghĩa + inference) và `train.py` (training) là pattern phổ biến: code dùng model chỉ import phần inference, không lôi theo cả training loop.
+Tách riêng `mnist.py` (định nghĩa + inference) và `train.py` (training) là pattern phổ biến: code dùng model chỉ import phần inference, không lôi theo cả training loop. Task `p2-digit` trên web app cũng chỉ import `mnist.py`.
 
 ## Bước 2: Chạy train lần đầu
 
 ```bash
-cd practices/02-mnist-chu-so-viet-tay/src
-python train.py
+.venv/bin/python backend/app/cvlib/train.py
 ```
 
-Script tự làm hết: tải MNIST về `../data` nếu chưa có, dựng `DigitCNN`, train 3 epoch trên CPU, chấm điểm trên test set, lưu weights vào `../models/mnist_cnn.pt`.
+Script tự làm hết: tải MNIST về `cvlib/data` nếu chưa có, dựng `DigitCNN`, train 3 epoch trên CPU, chấm điểm trên test set, lưu weights vào `cvlib/models/mnist_cnn.pt`. (Đường dẫn trong script tính theo vị trí file nên chạy từ đâu cũng được; `cd backend/app/cvlib` rồi `python train.py` cũng tương đương.)
 
 > [!NOTE]
 > Mặc định `--device cpu`. Nghe ngược đời nhưng có lý do: MNIST nhỏ, CPU train xong trong ~1 phút, và `mps` từng crash với torch 2.15 trên macOS 14 (ghi chú trong help của script). Với dataset nhỏ, CPU ổn định quan trọng hơn GPU nhanh.
@@ -193,37 +194,37 @@ Ba điều kiểm tra ngay:
 ## Bước 4: Kiểm chứng file output
 
 ```bash
-ls -lh ../models/mnist_cnn.pt   # ~0.9 MB
+ls -lh backend/app/cvlib/models/mnist_cnn.pt   # ~0.9 MB
 ```
 
-Rồi test "end to end", load lại file và predict thử một ảnh test:
+Rồi test "end to end", load lại file và predict thử một ảnh test (chạy python từ `backend/app/cvlib` để import được `mnist`):
 
 ```python
-import sys; sys.path.insert(0, "../src")
 import numpy as np
 from mnist import load_model, predict
 from torchvision import datasets
 
-model = load_model("../models/mnist_cnn.pt")
+model = load_model("models/mnist_cnn.pt")
 
-raw = datasets.MNIST("../data", train=False)[0][0]   # anh PIL dau tien cua test set
-img28 = np.array(raw)                               # 28x28 uint8, san sang cho predict
+raw = datasets.MNIST("data", train=False)[0][0]   # anh PIL dau tien cua test set
+img28 = np.array(raw)                            # 28x28 uint8, san sang cho predict
 print(predict(model, img28))
 # [{'label': '7', 'prob': 0.9999}, ...]
 ```
 
-Nếu load được và predict đúng, pipeline train → lưu → load → inference đã khép kín. Đây mới là bài test thật của quá trình train, chứ không phải con số accuracy.
+Nếu load được và predict đúng, pipeline train → lưu → load → inference đã khép kín. Đây mới là bài test thật của quá trình train, chứ không phải con số accuracy. File `models/mnist_cnn.pt` vừa sinh ra cũng chính là file task `p2-digit` trong CV Playground nạp lên khi chạy, nên train xong là web app dùng được model mới ngay.
 
 ## Bước 5: Thử nghiệm (quan trọng nhất để học)
 
 `train.py` nhận tham số, đừng ngại vặn:
 
 ```bash
+# chay tu backend/app/cvlib
 python train.py --epochs 5                    # train lau hon
 python train.py --lr 0.1                      # lr qua lon: xem loss nhay loan
 python train.py --lr 0.00001                  # lr qua nho: loss giam i ach
 python train.py --batch-size 8                # batch nho: train cham hon, loss nhieu hon
-python train.py --out ../models/mnist_v2.pt   # luu file khac ten, giu lai ban cu
+python train.py --out models/mnist_v2.pt      # luu file khac ten, giu lai ban cu
 ```
 
 Gợi ý thí nghiệm theo thứ tự:

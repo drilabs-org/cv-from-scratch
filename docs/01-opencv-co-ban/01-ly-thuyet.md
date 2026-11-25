@@ -18,13 +18,17 @@ Sau project này bạn có thể:
 
 ## Sản phẩm cuối
 
-Một CLI app `imgtool` nhận đường dẫn ảnh và một lệnh xử lý:
+Năm task trên web app **CV Playground**: upload ảnh, chỉnh tham số bằng thanh trượt, xem kết quả ngay trên trình duyệt. Mỗi task bọc một phép xử lý:
 
-```bash
-python src/imgtool.py photo.jpg gray
-python src/imgtool.py photo.jpg edges
-python src/imgtool.py objects.jpg count
-```
+| Task | Phép xử lý |
+|------|------------|
+| `p1-grayscale` | Ảnh màu thành ảnh xám |
+| `p1-blur` | Gaussian blur |
+| `p1-edges` | Canny edge detection |
+| `p1-binary` | Threshold (Otsu / adaptive) |
+| `p1-count` | Đếm vật thể bằng contour, vẽ bounding box |
+
+Toàn bộ logic xử lý nằm trong module `cvlib/imgtool.py` (các hàm dạng `(img) -> img`), phần đăng ký task nằm trong `tasks/p1_opencv.py`. Cùng module đó cũng chạy được độc lập bằng dòng lệnh khi cần debug nhanh ngoài app.
 
 ```mermaid
 flowchart LR
@@ -44,7 +48,7 @@ flowchart LR
 
 ## Nhắc lại Python
 
-Project giả định bạn đã biết Python. Sáu kỹ năng dưới đây là toàn bộ phần Python cần cho xử lý ảnh, và cả sáu đều xuất hiện trong `src/imgtool.py`:
+Project giả định bạn đã biết Python. Sáu kỹ năng dưới đây là toàn bộ phần Python cần cho xử lý ảnh, và cả sáu đều xuất hiện trong `cvlib/imgtool.py`:
 
 | Kỹ năng | Dùng để |
 |---------|---------|
@@ -53,7 +57,7 @@ Project giả định bạn đã biết Python. Sáu kỹ năng dưới đây l�
 | Tuple unpacking | Nhận nhiều giá trị trả về từ hàm OpenCV |
 | Hàm xếp tầng + dict dispatch | Ghép pipeline và thay chuỗi `if/elif` |
 | List comprehension | Lọc contour theo diện tích |
-| `argparse` | Dựng CLI chuẩn cho `imgtool` |
+| `argparse` | Entry point CLI phụ của `imgtool`, để chạy thử ngoài web app |
 
 > [!TIP]
 > Mỗi kỹ năng được giải thích kèm ví dụ và bẫy riêng trong [Python cho Computer Vision](./00-python-for-cv): đọc trang đó nếu bạn chưa quen NumPy hoặc từng bị lỗi "sửa ảnh copy mà ảnh gốc đổi theo".

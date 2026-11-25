@@ -25,7 +25,7 @@ flowchart LR
 | Source code    | [github.com/drilabs-org/cv-from-scratch](https://github.com/drilabs-org/cv-from-scratch) |
 | Web app demo   | `ghcr.io/drilabs-org/cv-from-scratch/cv-playground` (Docker image, public)               |
 
-Toàn bộ code thực hành nằm trong thư mục `practices/` của repo. Ngoài ra repo có kèm **CV Playground**, một web app chạy sẵn các bài tập của Project 1 và 2 (grayscale, blur, edge detection, nhận diện chữ số...) để bạn xem trước sản phẩm đầu ra:
+Sản phẩm của mỗi project là một nhóm **task trong CV Playground**: web app trong repo, bạn code logic xử lý trong `cv-playground/backend/app/cvlib/` rồi đăng ký thành task trên giao diện web. Thư mục `practices/` chứa bản giải tham khảo cho từng chương. Muốn xem trước sản phẩm đầu ra của Project 1 và 2 (grayscale, blur, edge detection, nhận diện chữ số...), chạy bản build sẵn bằng Docker:
 
 ```bash
 docker run -p 8000:8000 ghcr.io/drilabs-org/cv-from-scratch/cv-playground:latest
@@ -66,9 +66,9 @@ Ba project đầu có docs chi tiết trong bộ tài liệu này:
 
 | #   | Project                                                                    | Kỹ năng chính                                       | Sản phẩm cuối                  |
 | --- | -------------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------ |
-| 1   | [Xử lý ảnh với OpenCV](./01-opencv-co-ban/01-ly-thuyet)                    | Pixel, color space, filter, edge detection, contour | CLI app xử lý ảnh              |
-| 2   | [Nhận diện chữ số viết tay](./02-mnist-chu-so-viet-tay/01-ly-thuyet)       | Dataset, CNN, training loop, evaluation             | Model nhận diện số tự vẽ       |
-| 3   | [Nhận diện biển báo giao thông](./03-bien-bao-giao-thong/01-ly-thuyet)     | Data augmentation, transfer learning, phân tích lỗi | App nhận diện 43 loại biển báo |
+| 1   | [Xử lý ảnh với OpenCV](./01-opencv-co-ban/01-ly-thuyet)                    | Pixel, color space, filter, edge detection, contour | 5 task `p1-*` trong CV Playground      |
+| 2   | [Nhận diện chữ số viết tay](./02-mnist-chu-so-viet-tay/01-ly-thuyet)       | Dataset, CNN, training loop, evaluation             | Task `p2-digit` + model ~99% accuracy  |
+| 3   | [Nhận diện biển báo giao thông](./03-bien-bao-giao-thong/01-ly-thuyet)     | Data augmentation, transfer learning, phân tích lỗi | Task `p3-*` nhận diện 43 loại biển báo |
 
 Ba project mở rộng, học sau khi xong 3 project đầu (scope chi tiết ở phần bên dưới):
 
@@ -87,7 +87,7 @@ Ba project mở rộng, học sau khi xong 3 project đầu (scope chi tiết �
 | Mục                | Nội dung                                                                                      |
 | ------------------ | --------------------------------------------------------------------------------------------- |
 | Kiến thức đạt được | Ảnh là `ndarray`, BGR/RGB/HSV, histogram, kernel convolution, blur, threshold, Canny, contour |
-| Sản phẩm           | CLI app nhận ảnh đầu vào, áp dụng phép xử lý, xuất kết quả                                    |
+| Sản phẩm           | Module `cvlib/imgtool.py` + 5 task `p1-*` chạy trên web app CV Playground                     |
 | Demo sẵn           | Các task `p1-*` trong CV Playground                                                           |
 | Không bao gồm      | Machine learning, model, training                                                             |
 
@@ -98,7 +98,7 @@ Ba project mở rộng, học sau khi xong 3 project đầu (scope chi tiết �
 | Mục                | Nội dung                                                                                                                             |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
 | Kiến thức đạt được | Dataset/DataLoader, tensor, kiến trúc CNN (conv, pooling, linear), loss function, optimizer, training loop, accuracy, confusion matrix |
-| Sản phẩm           | Model đạt ~99% accuracy + script nhận diện chữ số bạn tự vẽ                                                                          |
+| Sản phẩm           | Model đạt ~99% accuracy + task `p2-digit` nhận diện chữ số bạn tự vẽ ngay trên web                                                   |
 | Demo sẵn           | Task `p2-digit` trong CV Playground                                                                                                  |
 | Không bao gồm      | Augmentation, pretrained model (để dành cho Project 3)                                                                               |
 
@@ -109,8 +109,8 @@ Ba project mở rộng, học sau khi xong 3 project đầu (scope chi tiết �
 | Mục                | Nội dung                                                                             |
 | ------------------ | ------------------------------------------------------------------------------------ |
 | Kiến thức đạt được | EDA cho ảnh, data augmentation, transfer learning với ResNet, đánh giá theo từng lớp |
-| Sản phẩm           | App nhận ảnh biển báo, trả về tên biển + độ tin cậy top-3                            |
-| Không bao gồm      | Detection (tìm vị trí biển báo trong ảnh lớn), đó là bước tiếp theo                  |
+| Sản phẩm           | Task `p3-*` trong CV Playground: upload ảnh biển báo, trả về tên biển + top-3 độ tin cậy |
+| Không bao gồm      | Detection (tìm vị trí biển báo trong ảnh lớn), đó là bước tiếp theo                      |
 
 ## 3 project mở rộng
 
@@ -152,8 +152,8 @@ Hoàn thành 3 project đầu, bạn đã có đủ nền để tự triển kha
 ## Cách dùng tài liệu
 
 1. Làm theo thứ tự Project 1 → 2 → 3. Mỗi project có 2 file: `01-ly-thuyet` (giới thiệu + khái niệm) và `02-thuc-hanh` (code, bài tập).
-2. Clone [repo](https://github.com/drilabs-org/cv-from-scratch) về máy, code thực hành nằm trong `practices/`. Gõ lại code thay vì copy-paste, chạy từng đoạn và thay đổi tham số để quan sát kết quả.
-3. Muốn xem nhanh sản phẩm đầu ra trước khi code, chạy CV Playground bằng Docker như phần [Tài nguyên đi kèm](#tai-nguyen-di-kem).
+2. Clone [repo](https://github.com/drilabs-org/cv-from-scratch) về máy, làm việc trực tiếp trong `cv-playground/`: logic xử lý viết trong `backend/app/cvlib/`, đăng ký task trong `backend/app/tasks/`, xem kết quả trên trình duyệt. Thư mục `practices/` có bản giải tham khảo nếu bạn bị kẹt. Gõ lại code thay vì copy-paste.
+3. Muốn xem nhanh sản phẩm đầu ra trước khi code, chạy bản CV Playground build sẵn bằng Docker như phần [Tài nguyên đi kèm](#tai-nguyen-di-kem).
 4. Làm bài tập cuối mỗi phần trước khi sang phần mới.
 
 > [!TIP]

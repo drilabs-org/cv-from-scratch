@@ -37,12 +37,14 @@ Một script MNIST đầy đủ gồm 5 phần, tương ứng các mục bên d�
 
 ## 1. Cài đặt PyTorch
 
+Tiếp tục làm việc trong **CV Playground**: code model và inference nằm trong `backend/app/cvlib/mnist.py`, script train là `backend/app/cvlib/train.py`, task trên web là `backend/app/tasks/p2_mnist.py`. Venv của playground đã có sẵn `torch` và `torchvision`, chỉ cần cài thêm hai package phục vụ phân tích ngoài app:
+
 ```bash
-mkdir cv-mnist
-cd cv-mnist
-python3 -m venv .venv
+cd cv-playground
+python3 -m venv .venv    # bỏ qua nếu đã tạo ở Project 1
 source .venv/bin/activate
-pip install torch torchvision matplotlib scikit-learn
+pip install -r requirements.txt
+pip install matplotlib scikit-learn
 ```
 
 Vai trò từng package:
@@ -114,7 +116,7 @@ Vì sao hai loader khác nhau:
 > [!NOTE]
 > `0.1307` và `0.3081` là mean và std đã được thống kê sẵn trên toàn bộ 60.000 ảnh train của MNIST, không phải số tự chọn. Chúng nằm trong tuple 1 phần tử vì `Normalize` nhận mean/std theo từng kênh màu: ảnh xám có 1 kênh, ảnh màu RGB sẽ là tuple 3 phần tử.
 
-`download=True` tải 4 file dữ liệu gốc về `./data/MNIST/raw`, mỗi file có bản nén `.gz` và bản đã giải nén:
+`download=True` tải 4 file dữ liệu gốc về `./data/MNIST/raw`, mỗi file có bản nén `.gz` và bản đã giải nén. Nếu chạy script từ `backend/app/cvlib`, `./data` chính là `cvlib/data`, đúng convention của repo (dataset đặt trong `cvlib/data`, weights trong `cvlib/models`):
 
 | File | Nội dung |
 |---|---|
@@ -330,7 +332,7 @@ probs = torch.softmax(model(image), dim=1)
 conf, pred = probs.max(1)
 ```
 
-## 6. Nhận diện chữ số tự vẽ
+## 6. Nhận diện chữ số tự vẽ: task `p2-digit`
 
 Viết một chữ số ra giấy, chụp lại, rồi tiền xử lý cho giống MNIST (xám, 28x28, nền đen chữ trắng, canh giữa):
 
@@ -344,57 +346,104 @@ flowchart LR
     F --> G["Model + softmax"]
 ```
 
+Trong CV Playground, tiền xử lý và suy luận nằm trong `backend/app/cvlib/mnist.py`, cùng file với `DigitCNN` để mọi nơi dùng chung đúng một bản:
+
 ```python
 import cv2
 import numpy as np
+import torch
+
+MNIST_MEAN = 0.1307
+MNIST_STD = 0.3081
 
 
-def preprocess(path):
-    img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
-
-    _, binary = cv2.threshold(img, 0, 255,
+def preprocess(img, invert="auto", pad=20):
+    """BGR ndarray -> 28x28 uint8 giong MNIST (net trang, nen den)."""
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    _, binary = cv2.threshold(gray, 0, 255,
                               cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    if invert == "always" or (invert == "auto" and (binary > 0).mean() > 0.5):
+        binary = cv2.bitwise_not(binary)
     coords = cv2.findNonZero(binary)
+    if coords is None:                       # anh trong: bao loi mem
+        return cv2.resize(binary, (28, 28))
     x, y, w, h = cv2.boundingRect(coords)
     digit = binary[y:y + h, x:x + w]
-
-    side = max(w, h) + 20
+    side = max(w, h) + pad
     canvas = np.zeros((side, side), np.uint8)
-    y0, x0 = (side - h) // 2, (side - w) // 2
-    canvas[y0:y0 + h, x0:x0 + w] = digit
-
+    canvas[(side - h) // 2:(side - h) // 2 + h,
+           (side - w) // 2:(side - w) // 2 + w] = digit
     return cv2.resize(canvas, (28, 28))
 
 
-small = preprocess("my_digit.jpg")
-tensor = transform(small).unsqueeze(0).to(device)  # them chieu batch
-
-model.eval()
-with torch.no_grad():
-    probs = torch.softmax(model(tensor), dim=1)
-    conf, pred = probs.max(1)
-
-print(f"Du doan: {pred.item()} (conf {conf.item():.2f})")
+def predict(model, img28):
+    """28x28 uint8 -> top-3 [{'label': '7', 'prob': 0.98}, ...]."""
+    x = torch.tensor(img28, dtype=torch.float32).div(255)
+    x = (x - MNIST_MEAN) / MNIST_STD
+    with torch.no_grad():
+        probs = torch.softmax(model(x[None, None]), dim=1)[0]
+    top = probs.topk(3)
+    return [{"label": str(int(i)), "prob": round(float(p), 4)}
+            for p, i in zip(top.values, top.indices)]
 ```
+
+Khác bản thử nghiệm trong notebook ở hai điểm: `preprocess` nhận `ndarray` BGR (vì ảnh đến từ upload, không phải đường dẫn), và `predict` tự normalize bằng đúng `MNIST_MEAN`/`MNIST_STD` đã dùng lúc train thay vì phụ thuộc `transform` bên ngoài.
 
 Các điểm đáng chú ý trong `preprocess`:
 
-- **`THRESH_BINARY_INV`:** đảo màu luôn, nét chữ đen trên giấy trắng thành nét trắng trên nền đen giống MNIST.
+- **`THRESH_BINARY_INV` + `invert`:** đảo màu nét chữ đen trên giấy trắng thành nét trắng trên nền đen giống MNIST. Chế độ `auto` tự đảo khi phần trắng chiếm quá nửa ảnh, an toàn cho cả ảnh đã đúng chiều.
 - **`THRESH_OTSU`:** tự chọn ngưỡng, không cần đoán số.
 - **Pad thành ô vuông:** giữ đúng tỉ lệ chữ, nếu resize thẳng từ hình chữ nhật chữ sẽ bị méo.
-- **`unsqueeze(0)`:** thêm chiều batch, model luôn cần `(N, C, H, W)` dù chỉ có 1 ảnh.
+- **`x[None, None]`:** thêm chiều batch và chiều kênh, model luôn cần `(N, C, H, W)` dù chỉ có 1 ảnh 1 kênh.
+
+### Đăng ký task
+
+`backend/app/tasks/p2_mnist.py` bọc `preprocess` + `predict` thành task `p2-digit`. Model nạp lazy ở lần gọi đầu để không kéo torch (~1-3 s) khi backend khởi động:
+
+```python
+@register_task(
+    id="p2-digit",
+    name="Recognize handwritten digit",
+    project="mnist-digits",
+    description="Classify a handwritten digit (0-9) with a CNN "
+                "trained on MNIST.",
+    params=[
+        {"name": "invert", "type": "select",
+         "options": ["auto", "always", "never"],
+         "default": "auto", "label": "Invert polarity"},
+    ],
+    output="image+data",
+    result_tab="output",
+    docs=DOCS_DIR / "p2-digit.md",
+)
+def p2_digit(img, params):
+    mnist, model = _get_model()
+    img28 = mnist.preprocess(img, invert=params.get("invert", "auto"))
+    top3 = mnist.predict(model, img28)
+    # show exact 28x28 the model saw, phong to cho de nhin
+    view = cv2.resize(img28, (280, 280), interpolation=cv2.INTER_NEAREST)
+    return view, {"top3": top3}
+```
+
+(Snippet rút gọn: bản đầy đủ trong repo còn param `pad` và trả thêm `note` khi ảnh trống không detect được chữ.)
+
+Chiêu hay của task này: nó trả về **chính ảnh 28x28 model nhìn thấy** (phóng to lên 280x280), nên khi đoán sai bạn nhìn ngay được tiền xử lý đúng hay chưa, thay vì chỉ có con số accuracy.
+
+### Chạy thử
+
+Chạy `./dev.sh`, mở http://localhost:5173, chọn `p2-digit`, upload ảnh chữ số tự chụp. Kết quả gồm ảnh đã tiền xử lý và badge `top3` kèm xác suất.
 
 | Triệu chứng | Nguyên nhân | Cách sửa |
 |-------------|-------------|----------|
-| Đoán sai, conf cao | Quên invert, nền trắng chữ đen | Kiểm tra `small` phải là chữ sáng/nền tối |
-| Conf thấp | Chữ nhỏ, lệch góc | Crop sát + pad hình vuông đúng cách |
+| Đoán sai, conf cao | Sai polarity, nền trắng chữ đen | Ảnh 28x28 trả về phải là nét sáng/nền tối; thử `invert = always` |
+| Conf thấp | Chữ nhỏ, lệch góc | Crop sát + tăng `pad` |
 | Kết quả thất thường | Ánh sáng, nét khác MNIST | Viết nét đậm, chụp đủ sáng |
 
 > [!TIP]
-> Luôn `plt.imshow(small, cmap="gray")` để nhìn chính xác thứ đưa vào model. 90% lỗi suy luận nằm ở tiền xử lý chứ không ở model.
+> 90% lỗi suy luận nằm ở tiền xử lý chứ không ở model. Task này đã trả ảnh 28x28 về UI nên bạn luôn nhìn được chính xác thứ đưa vào model mà không cần `imshow`.
 
 > [!WARNING]
-> Phải dùng đúng `transform` đã dùng lúc train (có `Normalize`). Đây chính là domain shift: model chỉ giỏi trên dữ liệu trông giống dữ liệu nó đã học.
+> Normalize lúc inference phải dùng đúng `MNIST_MEAN`/`MNIST_STD` đã train. Đây chính là domain shift: model chỉ giỏi trên dữ liệu trông giống dữ liệu nó đã học.
 
 ## Bài tập
 
@@ -407,7 +456,7 @@ Sắp xếp theo độ khó tăng dần:
 | 3 | Tính accuracy riêng từng chữ số, chữ nào khó nhất? | Phân tích lỗi | Dùng đường chéo chia tổng hàng của confusion matrix |
 | 4 | Thêm `nn.Dropout(0.25)` trước tầng linear cuối, so sánh overfitting | Làm quen regularization | So khoảng cách train acc và test acc |
 | 5 | Train trên EMNIST (`split="letters"`) để nhận diện chữ cái | Tự áp dụng sang bài toán mới | Tầng cuối đổi số neuron cho khớp số lớp |
-| 6 | Viết app Streamlit/Gradio: vẽ số trên canvas, nhận diện real-time | Đưa model ra sản phẩm | Dùng lại hàm `preprocess` |
+| 6 | Thêm task `p2-fashion` vào CV Playground: train Fashion-MNIST rồi nhận diện qua web | Đưa model thứ hai lên cùng app | Sao chép pattern của `p2-digit`: cvlib module + lazy load + `register_task` |
 
 ## Checklist tự đánh giá
 
@@ -416,6 +465,7 @@ Sắp xếp theo độ khó tăng dần:
 - [ ] 5 dòng cốt lõi của training loop.
 - [ ] Train acc vs test acc, overfitting là gì.
 - [ ] Vì sao phải tiền xử lý ảnh tự vẽ, domain shift là gì.
+- [ ] Bọc được `preprocess` + `predict` thành task trên CV Playground trả `image+data`.
 
 ## Cheatsheet
 

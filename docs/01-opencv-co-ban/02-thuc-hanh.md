@@ -1,6 +1,6 @@
 ---
 title: "Thực hành: Xử lý ảnh với OpenCV"
-description: "Thực hành xử lý ảnh với OpenCV từ cài đặt đến mini app imgtool hoàn chỉnh: đọc ảnh, lọc màu, threshold, tìm contour và đếm vật thể."
+description: "Thực hành xử lý ảnh với OpenCV từ cài đặt đến các task p1-* trên CV Playground: đọc ảnh, lọc màu, threshold, tìm contour và đếm vật thể."
 ---
 
 # Thực hành: Xử lý ảnh với OpenCV
@@ -9,19 +9,30 @@ Làm theo thứ tự từ trên xuống. Khái niệm chi tiết xem [Lý thuy�
 
 ## 1. Cài đặt môi trường
 
+Sản phẩm của project là các task trong **CV Playground**, web app có sẵn trong repo. Code bạn viết nằm ở hai chỗ: logic xử lý trong `backend/app/cvlib/`, đăng ký task trong `backend/app/tasks/`. Dựng môi trường và chạy app:
+
 ```bash
-mkdir cv-opencv-basics
-cd cv-opencv-basics
+cd cv-playground
 python3 -m venv .venv
 source .venv/bin/activate
-pip install opencv-python numpy matplotlib
+pip install -r requirements.txt
+pip install matplotlib       # chỉ để hiển thị ảnh trong các đoạn thử nghiệm dưới đây
+./dev.sh                     # backend :8000 + frontend :5173
 ```
 
-Trong đó: `opencv-python` là thư viện chính (import bằng `cv2`), `numpy` vì ảnh trong OpenCV chính là mảng NumPy, `matplotlib` để hiển thị ảnh (`cv2.imshow` hay crash trên macOS nên tài liệu này dùng `plt.imshow`).
+Mở http://localhost:5173, upload một ảnh bất kỳ rồi chạy thử task `p1-grayscale` để thấy luồng hoạt động trước khi code. Các đoạn code thử nghiệm ở mục 2-5 chạy trong venv này, đặt file ở đâu cũng được (ví dụ tự tạo thư mục `scratch/`).
+
+Trong `requirements.txt`: `opencv-python-headless` là thư viện chính (import bằng `cv2`, bản headless không kéo GUI deps), `numpy` vì ảnh trong OpenCV chính là mảng NumPy, `fastapi`/`uvicorn` chạy backend, `torch` dùng cho Project 2. `matplotlib` không có sẵn vì app hiển thị ảnh trên trình duyệt; bạn vừa cài nó để các đoạn script rời xem được ảnh (`cv2.imshow` hay crash trên macOS nên tài liệu này dùng `plt.imshow`).
 
 ### Tạo ảnh mẫu
 
-Lưu đoạn này thành `make_samples.py` trong `src/` rồi chạy:
+Repo có sẵn `backend/app/cvlib/make_samples.py` sinh `sample.png` và `coins.jpg` vào thư mục đang đứng. Chạy thử:
+
+```bash
+python backend/app/cvlib/make_samples.py
+```
+
+Nội dung chính của script, đáng gõ lại một lần để quen API vẽ hình:
 
 ```python
 import cv2
@@ -164,9 +175,9 @@ coins = [c for c in contours if cv2.contourArea(c) > 1000]
 print("So dong xu:", len(coins))
 ```
 
-## 6. Mini app imgtool
+## 6. Module imgtool và các task trên web app
 
-Gộp pipeline thành CLI. Lưu thành `src/imgtool.py`:
+Gộp pipeline thành module `backend/app/cvlib/imgtool.py`. Bản trong repo đã mở tham số cho từng phép để task trên web chỉnh được:
 
 ```python
 import argparse
@@ -177,80 +188,134 @@ def to_gray(img):
     return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 
-def to_blur(img):
-    return cv2.GaussianBlur(to_gray(img), (5, 5), 0)
+def to_blur(img, ksize=5, sigma=0):
+    return cv2.GaussianBlur(to_gray(img), (ksize, ksize), sigma)
 
 
-def to_edges(img):
-    return cv2.Canny(to_blur(img), 50, 150)
+def to_edges(img, t1=50, t2=150, ksize=5, aperture=3, l2=False):
+    return cv2.Canny(to_blur(img, ksize), t1, t2,
+                     apertureSize=aperture, L2gradient=l2)
 
 
-def to_binary(img):
-    _, b = cv2.threshold(to_blur(img), 0, 255,
+def to_binary(img, method="otsu", ksize=5, block=11, C=2):
+    if method == "adaptive":
+        return cv2.adaptiveThreshold(to_blur(img, ksize), 255,
+                                     cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                     cv2.THRESH_BINARY, block, C)
+    _, b = cv2.threshold(to_blur(img, ksize), 0, 255,
                          cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     return b
 
 
-def count_objects(img):
-    contours, _ = cv2.findContours(to_binary(img), cv2.RETR_EXTERNAL,
+def count_objects(img, min_area=500, ksize=5, method="otsu",
+                  invert="auto", dilate=0, block=11, C=2):
+    binary = to_binary(img, method, ksize, block, C)
+    white_ratio = (binary > 0).mean()
+    if invert == "always" or (invert == "auto" and white_ratio > 0.5):
+        binary = cv2.bitwise_not(binary)
+    if dilate > 0:
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (dilate, dilate))
+        binary = cv2.dilate(binary, kernel)
+    contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL,
                                    cv2.CHAIN_APPROX_SIMPLE)
     out = img.copy()
-    kept = [c for c in contours if cv2.contourArea(c) > 500]
+    kept = [c for c in contours if cv2.contourArea(c) > min_area]
     for c in kept:
         x, y, w, h = cv2.boundingRect(c)
         cv2.rectangle(out, (x, y), (x + w, y + h), (0, 255, 0), 2)
     return out, len(kept)
-
-
-def main():
-    parser = argparse.ArgumentParser(description="Cong cu xu ly anh don gian")
-    parser.add_argument("image", help="Duong dan anh dau vao")
-    parser.add_argument("command",
-                        choices=["gray", "blur", "edges", "binary", "count"])
-    parser.add_argument("--out", default="output.png")
-    args = parser.parse_args()
-
-    img = cv2.imread(args.image)
-    if img is None:
-        raise SystemExit(f"Khong doc duoc anh: {args.image}")
-
-    if args.command == "count":
-        out, n = count_objects(img)
-        print(f"Tim thay {n} vat the")
-    else:
-        out = {
-            "gray": to_gray,
-            "blur": to_blur,
-            "edges": to_edges,
-            "binary": to_binary,
-        }[args.command](img)
-
-    cv2.imwrite(args.out, out)
-    print(f"Da luu: {args.out}")
-
-
-if __name__ == "__main__":
-    main()
 ```
 
-Chạy thử:
+(Cuối file còn `main()` dùng `argparse` để chạy thử bằng dòng lệnh, xem mục 7 của [Python cho CV](./00-python-for-cv).)
+
+Điểm thiết kế đáng chú ý: hàm xếp tầng (`to_binary` gọi `to_blur` gọi `to_gray`), mọi hàm cùng kiểu `(img) -> img` nên lắp ghép được vào pipeline, và `count_objects` trả `(ảnh, số)` vì đầu ra gồm cả dữ liệu lẫn ảnh.
+
+### Đăng ký thành task
+
+File `backend/app/tasks/p1_opencv.py` bọc mỗi hàm thành một task bằng `@register_task`. Hai task tiêu biểu:
+
+```python
+from pathlib import Path
+
+from app.cvlib import imgtool
+from app.registry import register_task
+
+PROJECT = "opencv-basics"
+DOCS_DIR = Path(__file__).resolve().parent / "docs"
+
+
+@register_task(
+    id="p1-edges",
+    name="Canny edge detection",
+    project=PROJECT,
+    description="Find edges in the image using the Canny algorithm.",
+    params=[
+        {"name": "t1", "type": "int", "min": 0, "max": 255,
+         "default": 50, "label": "Low threshold"},
+        {"name": "t2", "type": "int", "min": 0, "max": 255,
+         "default": 150, "label": "High threshold"},
+        {"name": "ksize", "type": "int", "min": 1, "max": 31,
+         "step": 2, "default": 5, "label": "Blur kernel (odd)",
+         "group": "Pre-blur"},
+    ],
+    output="image",
+    docs=DOCS_DIR / "p1-edges.md",
+)
+def p1_edges(img, params):
+    return imgtool.to_edges(img, params.get("t1", 50),
+                            params.get("t2", 150),
+                            ksize=params.get("ksize", 5)), {}
+
+
+@register_task(
+    id="p1-count",
+    name="Count objects",
+    project=PROJECT,
+    description="Count objects via contours, drawing bounding boxes.",
+    params=[
+        {"name": "min_area", "type": "int", "min": 0, "max": 20000,
+         "default": 500, "label": "Minimum area (px)"},
+    ],
+    output="image+data",
+    result_tab="output",
+    docs=DOCS_DIR / "p1-count.md",
+)
+def p1_count(img, params):
+    out, n = imgtool.count_objects(img,
+                                   min_area=params.get("min_area", 500))
+    return out, {"count": n}
+```
+
+Đọc nhanh:
+
+- **Chữ ký cố định `(img, params) -> (ảnh, data)`:** `img` là `ndarray` BGR từ file upload, `params` là dict đã validate theo metadata. Task trả số liệu thì dùng `output="image+data"` và dict phẳng như `{"count": n}`.
+- **`params` tự sinh form:** `type` quyết định control (`int`/`float` thành slider, `select` thành dropdown), `group` xếp param vào nhóm "Advanced" gấp lại.
+- **`docs` trỏ tới file markdown** trong `tasks/docs/`, hiển thị thành panel tài liệu cạnh task; thêm file `<id>.vi.md` là có tab tiếng Việt.
+- **Không cần đụng frontend:** frontend đọc `GET /api/tasks` rồi tự dựng UI. Chỉ cần import module task trong `backend/app/main.py` để nó được đăng ký.
+
+### Chạy và kiểm tra
 
 ```bash
-python src/imgtool.py sample.png gray
-python src/imgtool.py sample.png edges --out edges.png
-python src/imgtool.py coins.jpg count --out counted.png
+./dev.sh     # rồi mở http://localhost:5173
 ```
 
-Điểm thiết kế đáng chú ý: hàm xếp tầng (`to_binary` gọi `to_blur` gọi `to_gray`), dict dispatch thay chuỗi if/elif, fail fast ngay sau `imread`.
+Upload `sample.png`, chọn task `p1-edges` và kéo slider `t1`/`t2` để thấy biên thay đổi trực tiếp. Upload `coins.jpg` cho `p1-count`: kết quả gồm ảnh vẽ bbox lẫn con số `count` trên badge.
+
+Module vẫn chạy được độc lập bằng CLI để debug nhanh:
+
+```bash
+python backend/app/cvlib/imgtool.py sample.png edges --out edges.png
+python backend/app/cvlib/imgtool.py coins.jpg count --out counted.png
+```
 
 ## Bài tập
 
 1. Thêm hình tam giác vào `make_samples.py` bằng `cv2.polylines`.
 2. Chụp ảnh có vật màu nổi bật, dùng HSV + `inRange` tách riêng vật đó.
-3. Chụp trang giấy dưới ánh sáng không đều, so sánh 3 cách threshold.
-4. Đếm số phím trên ảnh bàn phím chụp, nhận xét khi nào pipeline thất bại.
-5. Thêm lệnh `hsv-mask` cho imgtool nhận tham số khoảng màu.
-6. Thêm lệnh `scan` mô phỏng scanner: tìm contour 4 đỉnh lớn nhất rồi `cv2.warpPerspective` nắn thẳng.
+3. Chụp trang giấy dưới ánh sáng không đều, so sánh `otsu` vs `adaptive` ngay trong task `p1-binary`.
+4. Đếm số phím trên ảnh bàn phím chụp bằng `p1-count`, nhận xét khi nào pipeline thất bại và `dilate`/`invert` có giúp không.
+5. Thêm task `p1-hsv-mask` nhận khoảng màu (gợi ý: tham số `h_min`, `h_max` kiểu `int`, trả ảnh mask).
+6. Thêm task `p1-scan` mô phỏng scanner: tìm contour 4 đỉnh lớn nhất rồi `cv2.warpPerspective` nắn thẳng. Đây là bản rút gọn của Project 6.
 
 ## Checklist tự đánh giá
 
@@ -259,6 +324,7 @@ python src/imgtool.py coins.jpg count --out counted.png
 - [ ] Khi nào chọn HSV thay RGB để lọc màu?
 - [ ] Vì sao blur trước khi Canny hoặc threshold?
 - [ ] Kể được pipeline đếm vật thể từ ảnh màu.
+- [ ] Đăng ký được một task mới vào CV Playground: handler `(img, params)`, metadata params, import trong `main.py`.
 
 ## Tiếp theo
 

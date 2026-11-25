@@ -1,6 +1,6 @@
 ---
 title: "Thực hành: Nhận diện biển báo giao thông"
-description: "Thực hành phân loại 43 loại biển báo trên GTSRB: EDA, augmentation, transfer learning ResNet18, đánh giá theo lớp và script predict."
+description: "Thực hành phân loại 43 loại biển báo trên GTSRB: EDA, augmentation, transfer learning ResNet18, đánh giá theo lớp và đăng ký task p3-* trong CV Playground."
 ---
 
 # Thực hành: Nhận diện biển báo giao thông
@@ -9,13 +9,16 @@ Làm theo thứ tự từ trên xuống. Khái niệm chi tiết xem [Lý thuy�
 
 ## 1. Cài đặt và tải dữ liệu
 
+Tiếp tục trong **CV Playground**: module model viết trong `backend/app/cvlib/gtsrb.py`, task đăng ký trong `backend/app/tasks/p3_gtsrb.py`. Venv đã có `torch`, `torchvision`, `pillow`, chỉ cần thêm package phân tích:
+
 ```bash
-mkdir cv-traffic-signs
-cd cv-traffic-signs
-python3 -m venv .venv
-source .venv/bin/activate
-pip install torch torchvision matplotlib scikit-learn pillow
+cd cv-playground
+source .venv/bin/activate    # bỏ qua nếu chưa tạo: xem mục cài đặt của Project 1
+pip install -r requirements.txt
+pip install matplotlib scikit-learn
 ```
+
+Các đoạn code dưới đây giả định chạy từ `backend/app/cvlib`, để dataset rơi vào `cvlib/data` và weights vào `cvlib/models` đúng convention.
 
 Tải GTSRB qua torchvision (~260MB lần đầu):
 
@@ -208,7 +211,7 @@ for epoch in range(num_epochs):
     print(f"Epoch {epoch + 1}/{num_epochs} | "
           f"loss {total_loss / seen:.4f} | train acc {correct / seen:.4f}")
 
-torch.save(model.state_dict(), "gtsrb_resnet18.pt")
+torch.save(model.state_dict(), "models/gtsrb_resnet18.pt")
 ```
 
 ## 6. Đánh giá
@@ -251,12 +254,12 @@ ConfusionMatrixDisplay(cm, display_labels=speed_ids).plot(cmap="Blues")
 plt.show()
 ```
 
-## 7. Script predict.py
+## 7. Module gtsrb và task `p3-sign`
 
-Lưu thành `src/predict.py`:
+Logic model gom trong `backend/app/cvlib/gtsrb.py`, theo đúng pattern của `mnist.py` ở Project 2 (định nghĩa + inference một chỗ):
 
 ```python
-import sys
+import cv2
 import torch
 import torch.nn as nn
 from PIL import Image
@@ -274,39 +277,82 @@ transform = transforms.Compose([
                          [0.229, 0.224, 0.225]),
 ])
 
-model = models.resnet18(weights=None)
-model.fc = nn.Linear(model.fc.in_features, 43)
-model.load_state_dict(torch.load("gtsrb_resnet18.pt",
-                                 map_location="cpu"))
-model.eval()
+
+def load_model(weights_path):
+    model = models.resnet18(weights=None)
+    model.fc = nn.Linear(model.fc.in_features, 43)
+    state = torch.load(weights_path, map_location="cpu", weights_only=True)
+    model.load_state_dict(state)
+    model.eval()
+    return model
 
 
-def predict(path):
-    img = Image.open(path).convert("RGB")
-    x = transform(img).unsqueeze(0)
+def predict(model, img_bgr):
+    """BGR ndarray -> top-3 [{'label': ..., 'prob': ...}]."""
+    rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+    x = transform(Image.fromarray(rgb)).unsqueeze(0)
     with torch.no_grad():
         probs = torch.softmax(model(x), dim=1)[0]
     top = probs.topk(3)
-    return [(CLASS_NAMES.get(int(i), f"lop {i}"), float(v))
+    return [{"label": CLASS_NAMES.get(int(i), f"lop {i}"),
+             "prob": round(float(v), 4)}
             for v, i in zip(top.values, top.indices)]
-
-
-if __name__ == "__main__":
-    for name, conf in predict(sys.argv[1]):
-        print(f"{name}: {conf:.2%}")
 ```
 
-Chạy:
+File đăng ký `backend/app/tasks/p3_gtsrb.py` gần như copy khung của `p2_mnist.py`: nạp model lazy, trả `output="data"` vì task chỉ trả nhãn, không có ảnh đầu ra:
 
-```bash
-python src/predict.py bien_stop.jpg
-# Dung lai: 94.20%
-# Nhuong duong: 3.80%
-# Cam di vao: 1.10%
+```python
+from pathlib import Path
+
+from app.registry import register_task
+
+PROJECT = "traffic-signs"
+DOCS_DIR = Path(__file__).resolve().parent / "docs"
+WEIGHTS = (Path(__file__).resolve().parents[1]
+           / "cvlib" / "models" / "gtsrb_resnet18.pt")
+
+_GTSRB = None
+_MODEL = None
+
+
+def _get_model():
+    """Lazy: import torch + nap weights ton vai giay, khong duoc lam
+    luc module dang duoc import de dang ky task."""
+    global _GTSRB, _MODEL
+    if _MODEL is None:
+        from app.cvlib import gtsrb
+        _GTSRB = gtsrb
+        _MODEL = gtsrb.load_model(WEIGHTS)
+    return _GTSRB, _MODEL
+
+
+@register_task(
+    id="p3-sign",
+    name="Traffic sign recognition",
+    project=PROJECT,
+    description="Classify a traffic sign into 43 GTSRB classes "
+                "with fine-tuned ResNet18.",
+    output="data",
+    docs=DOCS_DIR / "p3-sign.md",
+)
+def p3_sign(img, params):
+    gtsrb, model = _get_model()
+    return None, {"top3": gtsrb.predict(model, img)}
+```
+
+Đừng quên hai thứ nhỏ nhưng bắt buộc: thêm `from app.tasks import p3_gtsrb` vào `backend/app/main.py` để task được đăng ký, và tạo `tasks/docs/p3-sign.md` nếu muốn có panel tài liệu.
+
+Chạy `./dev.sh`, upload ảnh biển báo vào `p3-sign`, kết quả mong đợi:
+
+```text
+top3: Dung lai (94.20%) | Nhuong duong (3.80%) | Cam di vao (1.10%)
 ```
 
 > [!WARNING]
 > Transform lúc predict phải y hệt `test_transform` lúc train. Sai normalize là lỗi số 1 khiến model tốt lúc test nhưng tệ lúc dùng thật.
+
+> [!NOTE]
+> Task trả ảnh `None` là hợp lệ: `output="data"` báo cho frontend chỉ hiển thị phần số liệu. Muốn vẽ nhãn lên ảnh và trả về thì đổi thành `output="image+data"`.
 
 ## Bài tập
 
@@ -326,9 +372,9 @@ python src/predict.py bien_stop.jpg
 
 ## Hướng mở rộng
 
-- Dùng YOLO tìm biển báo trong ảnh cảnh đường toàn cảnh (detection).
-- Web app Streamlit: upload ảnh, hiển thị top-3 và Grad-CAM.
-- Thử pipeline trên dataset tự thu (ví dụ 5 loại trái cây).
+- Dùng YOLO tìm biển báo trong ảnh cảnh đường toàn cảnh (detection), rồi đăng ký thêm task `p5-*` trong CV Playground.
+- Thêm task variant của `p3-sign` hiển thị Grad-CAM: model trả vùng "nhìn vào đâu" thay vì chỉ top-3.
+- Thử pipeline trên dataset tự thu (ví dụ 5 loại trái cây), đăng ký thành task mới cùng `project` tag riêng.
 
 ## Hoàn thành
 

@@ -1,11 +1,11 @@
 ---
 title: "Python cho Computer Vision: Những gì thực sự cần nắm"
-description: "Ôn tập Python thực dụng cho xử lý ảnh: venv, slicing trên ndarray, tuple unpacking với API OpenCV, hàm xếp tầng và dict dispatch, list comprehension, argparse — kèm bẫy thường gặp."
+description: "Ôn tập Python thực dụng cho xử lý ảnh: venv, slicing trên ndarray, tuple unpacking với API OpenCV, hàm xếp tầng và dict dispatch, list comprehension, argparse - kèm bẫy thường gặp."
 ---
 
 # Python cho Computer Vision: Những gì thực sự cần nắm
 
-Trong Computer Vision, bạn không cần decorator, metaclass hay async. Bạn cần **sáu kỹ năng rất cụ thể**, và cả sáu đều xuất hiện trong `src/imgtool.py` — mini app của project này. Trang này ôn lại từng kỹ năng, kèm lý do nó quan trọng và bẫy hay gặp.
+Trong Computer Vision, bạn không cần decorator, metaclass hay async. Bạn cần **sáu kỹ năng rất cụ thể**, và cả sáu đều xuất hiện trong `cvlib/imgtool.py`, module xử lý ảnh đứng sau các task `p1-*` của CV Playground. Trang này ôn lại từng kỹ năng, kèm lý do nó quan trọng và bẫy hay gặp. Phần cuối có thêm một mục về **task handler**, điểm vào kết nối code của bạn với web app.
 
 Đọc lướt một lần trước khi vào [lý thuyết](./01-ly-thuyet), rồi quay lại tra khi code [thực hành](./02-thuc-hanh) bị lỗi.
 
@@ -14,7 +14,7 @@ flowchart LR
     A["venv + pip"] --> B["Môi trường tái lập được"]
     C["Slicing ndarray"] --> D["Cắt vùng, đổi kênh, giảm mẫu"]
     E["Tuple unpacking"] --> F["Nhận kết quả hàm OpenCV"]
-    G["Hàm xếp tầng + dict dispatch"] --> H["Pipeline và CLI gọn"]
+    G["Hàm xếp tầng + dict dispatch"] --> H["Pipeline và entry point gọn"]
     I["List comprehension"] --> J["Lọc contour theo area"]
     K["argparse"] --> H
 ```
@@ -24,7 +24,7 @@ flowchart LR
 Mỗi project một môi trường riêng. Lý do không phải hình thức: `opencv-python`, `torch`, `numpy` có ràng buộc phiên bản chéo nhau, cài chung vào Python hệ thống sẽ sớm tạo ra lỗi `ImportError` hoặc kết quả tính toán sai mà không rõ nguyên nhân.
 
 ```bash
-cd practices/01-opencv-co-ban
+cd cv-playground
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
@@ -48,13 +48,7 @@ Ba quy tắc nhỏ nhưng tiết kiệm nhiều giờ:
 
 ### requirements.txt làm việc thế nào
 
-`requirements.txt` là file text thuần, mỗi dòng khai báo **một package cần cài**. `pip install -r` đọc file và cài tất cả cùng lúc, thay vì gõ `pip install` từng package một. File của project này chỉ có ba dòng:
-
-```
-opencv-python
-numpy
-matplotlib
-```
+`requirements.txt` là file text thuần, mỗi dòng khai báo **một package cần cài**. `pip install -r` đọc file và cài tất cả cùng lúc, thay vì gõ `pip install` từng package một. File của CV Playground pin sẵn toàn bộ phiên bản, gồm cả web (`fastapi`, `uvicorn`) lẫn CV (`opencv-python-headless`, `torch`, `numpy`):
 
 Cú pháp đầy đủ cho từng dòng:
 
@@ -81,11 +75,11 @@ Phân biệt hai cách tạo file:
 > `opencv-python` và `opencv-contrib-python` **ghi đè lên nhau** cùng thư mục `cv2`. Cài cả hai sẽ ra trạng thái không xác định. Chọn một: bản thường cho nhu cầu của project này, bản `contrib` khi cần module mở rộng, bản `headless` khi chạy trên server không có màn hình.
 
 > [!TIP]
-> Trên macOS, `cv2.imshow` thường crash hoặc treo do xung đột GUI backend. Tài liệu này dùng `plt.imshow` để hiển thị — vừa ổn định vừa dễ chèn vào notebook. Khi cần xem nhanh trong terminal, lưu ảnh ra file rồi mở bằng Preview cũng đủ.
+> Trên macOS, `cv2.imshow` thường crash hoặc treo do xung đột GUI backend. Tài liệu này dùng `plt.imshow` để hiển thị - vừa ổn định vừa dễ chèn vào notebook. Khi cần xem nhanh trong terminal, lưu ảnh ra file rồi mở bằng Preview cũng đủ. Còn trong CV Playground thì kết quả hiển thị ngay trên trình duyệt, không cần `imshow` hay `plt` gì cả.
 
 ## 2. Slicing: kỹ năng dùng nhiều nhất
 
-Ảnh trong OpenCV là `np.ndarray`. Mọi thao tác "cắt, thu nhỏ, đổi kênh, tô vùng" đều là slicing — không cần hàm riêng.
+Ảnh trong OpenCV là `np.ndarray`. Mọi thao tác "cắt, thu nhỏ, đổi kênh, tô vùng" đều là slicing - không cần hàm riêng.
 
 ```python
 img = cv2.imread("sample.png")      # shape (400, 400, 3), dtype uint8
@@ -157,7 +151,7 @@ roi[:] = 0                          # ảnh gốc không đổi
 ```
 
 > [!TIP]
-> Kiểm tra một mảng là view hay bản sao: `roi.base is img` trả `True` nghĩa là view. Khi hàm của bạn nhận ảnh và có ý định sửa tại chỗ, hãy `img = img.copy()` ở đầu hàm — người gọi sẽ không bị "ảnh tự nhiên bị vẽ đè".
+> Kiểm tra một mảng là view hay bản sao: `roi.base is img` trả `True` nghĩa là view. Khi hàm của bạn nhận ảnh và có ý định sửa tại chỗ, hãy `img = img.copy()` ở đầu hàm - người gọi sẽ không bị "ảnh tự nhiên bị vẽ đè".
 
 > [!NOTE]
 > `img[:, :, ::-1]` cho ra mảng có stride âm. Matplotlib hiển thị bình thường, nhưng một số hàm OpenCV từ chối mảng không liên tục. Nếu gặp lỗi, bọc bằng `np.ascontiguousarray(...)`, hoặc dùng `cv2.cvtColor(img, cv2.COLOR_BGR2RGB)`.
@@ -187,7 +181,7 @@ Danh sách chữ ký hay dùng:
 
 | Hàm | Trả về |
 |-----|--------|
-| `cv2.threshold` | `retval, dst` — `retval` là ngưỡng thực dùng |
+| `cv2.threshold` | `retval, dst` - `retval` là ngưỡng thực dùng |
 | `cv2.findContours` | `contours, hierarchy` (OpenCV 4) |
 | `cv2.boundingRect` | `x, y, w, h` |
 | `cv2.minMaxLoc` | `minVal, maxVal, minLoc, maxLoc` |
@@ -202,7 +196,7 @@ Danh sách chữ ký hay dùng:
 
 ## 4. Hàm nhỏ xếp tầng + dict dispatch
 
-Cách viết này là trái tim của `imgtool.py`. Mỗi hàm nhận một ảnh, trả một ảnh — nhờ vậy chúng lắp ghép được như ống nước:
+Cách viết này là trái tim của `imgtool.py`. Mỗi hàm nhận một ảnh, trả một ảnh - nhờ vậy chúng lắp ghép được như ống nước:
 
 ```python
 def to_gray(img):
@@ -234,11 +228,14 @@ out = HANDLERS[args.command](img)
 
 Thêm lệnh mới = thêm một dòng vào dict, không đụng vào logic điều phối.
 
+> [!NOTE]
+> Trên web app, vai trò "chọn lệnh nào chạy" không còn ở dict `HANDLERS` nữa mà do **task registry** đảm nhiệm: mỗi phép xử lý đăng ký thành một task riêng (`p1-grayscale`, `p1-blur`...) và người dùng chọn task trên giao diện. Dict dispatch vẫn còn trong `main()` của `imgtool.py`, entry point CLI để chạy thử ngoài app. Chi tiết ở mục 8.
+
 > [!TIP]
 > Đặt dict ở cấp module (như `HANDLERS`) thay vì tạo mới trong `main()`: dễ test, dễ import, và không dựng lại dict mỗi lần gọi. Đừng quên `HANDLERS.get(cmd)` nếu `cmd` đến từ input người dùng chưa được `choices` kiểm soát.
 
 > [!WARNING]
-> Dict dispatch chỉ đúng khi **mọi hàm cùng chữ ký**. Hàm kiểu `count_objects(img)` trả về `(ảnh, số)` không thể nhét chung vào dict trên — đó là lý do `imgtool.py` xử lý `count` bằng nhánh riêng. Đừng cố ép cho đẹp; nhánh riêng cho trường hợp khác kiểu là code trung thực.
+> Dict dispatch chỉ đúng khi **mọi hàm cùng chữ ký**. Hàm kiểu `count_objects(img)` trả về `(ảnh, số)` không thể nhét chung vào dict trên - đó là lý do `imgtool.py` xử lý `count` bằng nhánh riêng. Đừng cố ép cho đẹp; nhánh riêng cho trường hợp khác kiểu là code trung thực.
 
 ## 5. List comprehension để lọc contour
 
@@ -282,7 +279,7 @@ bright = cv2.add(img, 100)          # 200 + 100 -> 255 (đúng, bão hoà)
 bright = np.clip(img.astype(np.int16) + 100, 0, 255).astype(np.uint8)
 ```
 
-**Tạo ảnh từ đầu** — cách nhanh nhất để test pipeline mà không cần file:
+**Tạo ảnh từ đầu** - cách nhanh nhất để test pipeline mà không cần file:
 
 ```python
 img = np.full((400, 400, 3), 255, dtype=np.uint8)   # nền trắng
@@ -303,9 +300,9 @@ mean_brightness = gray.mean()
 > [!TIP]
 > Khi kết quả lạ (ảnh đen sạch, ảnh trắng sạch, số đếm bằng 0), in ba thứ theo thứ tự: `img.shape`, `img.dtype`, `img.min(), img.max()`. Ba dòng này bắt được phần lớn lỗi pipeline trước khi phải debug sâu.
 
-## 7. argparse: CLI chuẩn
+## 7. argparse: entry point CLI phụ
 
-`argparse` cho bạn `--help`, thông báo lỗi và kiểm tra giá trị miễn phí. Đây là phần cuối của `imgtool.py`:
+Trên CV Playground, người dùng chọn task và chỉnh tham số trên giao diện web, không qua dòng lệnh. Nhưng `imgtool.py` vẫn giữ một `main()` dùng `argparse` để chạy thử độc lập (và `train.py` ở Project 2 cũng nhận tham số kiểu này), nên kỹ năng đọc CLI vẫn cần. `argparse` cho bạn `--help`, thông báo lỗi và kiểm tra giá trị miễn phí. Đây là phần cuối của `imgtool.py`:
 
 ```python
 import argparse
@@ -336,10 +333,45 @@ parser.add_argument("images", nargs="+")                     # nhiều file
 ```
 
 > [!WARNING]
-> Mọi giá trị từ `argparse` là `str` trừ khi bạn khai báo `type=`. `args.scale * 2` với `"--scale 3"` cho ra `"33"` chứ không phải `6` — lỗi im lặng, không exception. Luôn khai báo `type=int` hoặc `type=float` cho tham số số.
+> Mọi giá trị từ `argparse` là `str` trừ khi bạn khai báo `type=`. `args.scale * 2` với `"--scale 3"` cho ra `"33"` chứ không phải `6` - lỗi im lặng, không exception. Luôn khai báo `type=int` hoặc `type=float` cho tham số số.
 
 > [!TIP]
 > `choices=[...]` vừa kiểm tra input vừa tự sinh danh sách lệnh trong `--help`. Đặt tên tham số trùng với key của dict dispatch (`command` ↔ `HANDLERS`) để không phải viết lớp ánh xạ nào.
+
+## 8. Task handler: điểm vào của CV Playground
+
+Mỗi task trên web app là một hàm Python được đăng ký bằng decorator `@register_task`, kèm metadata để frontend tự sinh giao diện (slider, select, nút chạy). Chữ ký bắt buộc:
+
+```python
+from app.cvlib import imgtool
+from app.registry import register_task
+
+
+@register_task(
+    id="p1-blur",
+    name="Gaussian blur",
+    project="opencv-basics",
+    description="Blur the image with a Gaussian filter to reduce noise.",
+    params=[
+        {"name": "ksize", "type": "int", "min": 1, "max": 31,
+         "step": 2, "default": 5, "label": "Kernel size (odd)"},
+    ],
+    output="image",
+)
+def p1_blur(img, params):
+    return imgtool.to_blur(img, params.get("ksize", 5)), {}
+```
+
+Ba điểm then chốt:
+
+- **Hàm nhận `(img, params)`:** `img` là `ndarray` BGR từ ảnh user upload, `params` là `dict` giá trị đã được validate theo metadata. Đọc bằng `params.get("ten", mac_dinh)`.
+- **Trả về `(ảnh, data)`:** ảnh `ndarray` để hiển thị (hoặc `None` nếu task chỉ trả số liệu), `data` là dict phẳng (`{"count": 5}`, `{"top3": [...]}`) render thành badge trên UI.
+- **Logic nằm trong `cvlib/`, task chỉ là wrapper mỏng:** `p1_blur` không tự gọi `cv2.GaussianBlur` mà gọi `imgtool.to_blur`. Tách vậy để cùng một hàm chạy được trên web lẫn script CLI, và để test logic không cần dựng server.
+
+Metadata `params` tự sinh form: `type` là `int`/`float`/`select`, `min`/`max`/`step` điều khiển slider, `options` bắt buộc cho `select`. Param có `group` sẽ xếp vào nhóm "Advanced" thay vì hiện sẵn.
+
+> [!TIP]
+> Thiết kế tham số giống hệt argparse: đặt `default` hợp lý, dùng `min`/`max`/`options` để chặn giá trị sai ngay từ UI thay vì xử lý trong hàm. Khác ở chỗ `coerce_params` của registry ép kiểu và báo lỗi 422 giúp bạn, không phải tự `type=` như argparse.
 
 ## Bẫy tổng hợp
 
@@ -354,9 +386,9 @@ parser.add_argument("images", nargs="+")                     # nhiều file
 
 ## Bài tập nhanh
 
-1. Viết hàm `crop_center(img, size)` cắt chính giữa ảnh, trả về bản sao — đảm bảo ảnh gốc không đổi.
+1. Viết hàm `crop_center(img, size)` cắt chính giữa ảnh, trả về bản sao - đảm bảo ảnh gốc không đổi.
 2. Viết `apply(img, name)` dùng dict dispatch cho ba phép: `gray`, `edges`, `invert`, mỗi hàm `(img) -> img`.
-3. Thêm `--min-area` vào `imgtool.py`, dùng nó thay số `500` trong `count_objects`.
+3. Trong `cvlib/imgtool.py`, hàm `count_objects` đã nhận `min_area`; nối nó vào entry point `main()` bằng một tham số `--min-area` thay vì để mặc định `500`.
 4. In ra `ret` của Otsu cho 5 ảnh khác nhau, nhận xét ngưỡng có ổn định không.
 
 ## Quiz tự kiểm tra
@@ -395,7 +427,7 @@ parser.add_argument("images", nargs="+")                     # nhiều file
         "Khi dùng `argparse`"
       ],
       "answer": 0,
-      "explanation": "Dict dispatch giả định mọi giá trị gọi được theo cùng một cách. `count_objects` trả về tuple nên cần nhánh riêng — đó chính là cách `imgtool.py` đang làm."
+      "explanation": "Dict dispatch giả định mọi giá trị gọi được theo cùng một cách. `count_objects` trả về tuple nên cần nhánh riêng - đó chính là cách `imgtool.py` đang làm."
     },
     {
       "type": "multiple",
@@ -419,7 +451,7 @@ parser.add_argument("images", nargs="+")                     # nhiều file
         "Số `3`"
       ],
       "answer": 0,
-      "explanation": "Không khai báo `type` thì giá trị luôn là `str`, và `str * int` là lặp chuỗi. Không có exception nào — đây là kiểu lỗi im lặng khó tìm nhất trong CLI."
+      "explanation": "Không khai báo `type` thì giá trị luôn là `str`, và `str * int` là lặp chuỗi. Không có exception nào - đây là kiểu lỗi im lặng khó tìm nhất trong CLI."
     }
   ]
 }
@@ -428,4 +460,4 @@ parser.add_argument("images", nargs="+")                     # nhiều file
 ## Tiếp theo
 
 - [Lý thuyết: ảnh là ma trận, màu, lọc, contour](./01-ly-thuyet)
-- [Thực hành: pipeline và mini app imgtool](./02-thuc-hanh)
+- [Thực hành: pipeline và các task `p1-*` trong CV Playground](./02-thuc-hanh)

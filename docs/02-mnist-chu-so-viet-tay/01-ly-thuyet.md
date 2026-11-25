@@ -22,7 +22,7 @@ Sau project này bạn có thể:
 - Đánh giá model bằng confusion matrix và phân tích mẫu sai.
 - Tiền xử lý ảnh ngoài đời để đưa vào model.
 
-**Kết quả kỳ vọng:** accuracy ~99% trên tập test sau 3-5 epoch, và nhận diện được chữ số bạn tự viết ra giấy.
+**Kết quả kỳ vọng:** accuracy ~99% trên tập test sau 3-5 epoch, và nhận diện được chữ số bạn tự viết ra giấy qua task `p2-digit` trong CV Playground.
 
 **Chuẩn bị:**
 

@@ -26,12 +26,7 @@ Sau project này bạn có thể:
 
 ## Sản phẩm cuối
 
-Script nhận ảnh biển báo bất kỳ, trả về tên biển và top-3 dự đoán kèm độ tin cậy:
-
-```bash
-python src/predict.py sign.jpg
-# Stop (0.94) | Yield (0.04) | No entry (0.01)
-```
+Một task `p3-*` mới trong CV Playground: upload ảnh biển báo lên web app, nhận lại top-3 dự đoán kèm độ tin cậy, ví dụ `Dung lai (0.94) | Nhuong duong (0.04) | Cam di vao (0.01)`. Bên dưới task là module `cvlib/gtsrb.py` (tiền xử lý + ResNet18 fine-tune) và file đăng ký `tasks/p3_gtsrb.py` do bạn tự viết theo pattern của `p2-digit`.
 
 ## Chuẩn bị
 
