@@ -1,6 +1,6 @@
 ---
 title: "Học Computer Vision qua project thực hành"
-description: "Lộ trình tự học Computer Vision cho người đã biết Python: tổng quan 6 project từ OpenCV cơ bản đến transfer learning, kèm định hướng mở rộng."
+description: "Lộ trình tự học Computer Vision cho người đã biết Python: tổng quan 6 project từ OpenCV cơ bản đến transfer learning, kèm web app demo chạy bằng Docker."
 ---
 
 # Học Computer Vision qua project thực hành
@@ -18,11 +18,26 @@ flowchart LR
     P3 -.-> P6["Project 6<br />Document scanner"]
 ```
 
+## Tài nguyên đi kèm
+
+| Tài nguyên     | Link                                                                                    |
+| -------------- | --------------------------------------------------------------------------------------- |
+| Source code    | [github.com/drilabs-org/cv-from-scratch](https://github.com/drilabs-org/cv-from-scratch) |
+| Web app demo   | `ghcr.io/drilabs-org/cv-from-scratch/cv-playground` (Docker image, public)               |
+
+Toàn bộ code thực hành nằm trong thư mục `practices/` của repo. Ngoài ra repo có kèm **CV Playground**, một web app chạy sẵn các bài tập của Project 1 và 2 (grayscale, blur, edge detection, nhận diện chữ số...) để bạn xem trước sản phẩm đầu ra:
+
+```bash
+docker run -p 8000:8000 ghcr.io/drilabs-org/cv-from-scratch/cv-playground:latest
+# mở http://localhost:8000
+```
+
 ## Yêu cầu trước khi bắt đầu
 
 - Python 3.10 trở lên, biết viết hàm, class, dùng pip.
 - NumPy ở mức cơ bản (tạo mảng, indexing, slicing). Nếu chưa rành, phần [Ảnh là ma trận](./01-opencv-co-ban/01-ly-thuyet) trong Project 1 sẽ ôn lại trong ngữ cảnh ảnh.
 - Máy tính cá nhân. Không cần GPU, cả 3 project đều chạy được trên CPU.
+- Docker (không bắt buộc), chỉ cần nếu muốn chạy web app demo.
 
 ## Bản đồ kiến thức
 
@@ -49,11 +64,11 @@ mindmap
 
 Ba project đầu có docs chi tiết trong bộ tài liệu này:
 
-| #   | Project                                                                     | Kỹ năng chính                                       | Sản phẩm cuối                  |
-| --- | --------------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------ |
-| 1   | [Xử lý ảnh với OpenCV](./01-opencv-co-ban/01-ly-thuyet)                | Pixel, color space, filter, edge detection, contour | CLI app xử lý ảnh              |
-| 2   | [Nhận diện chữ số viết tay](./02-mnist-chu-so-viet-tay/01-ly-thuyet)   | Dataset, CNN, training loop, evaluation             | Model nhận diện số tự vẽ       |
-| 3   | [Nhận diện biển báo giao thông](./03-bien-bao-giao-thong/01-ly-thuyet) | Data augmentation, transfer learning, phân tích lỗi | App nhận diện 43 loại biển báo |
+| #   | Project                                                                    | Kỹ năng chính                                       | Sản phẩm cuối                  |
+| --- | -------------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------ |
+| 1   | [Xử lý ảnh với OpenCV](./01-opencv-co-ban/01-ly-thuyet)                    | Pixel, color space, filter, edge detection, contour | CLI app xử lý ảnh              |
+| 2   | [Nhận diện chữ số viết tay](./02-mnist-chu-so-viet-tay/01-ly-thuyet)       | Dataset, CNN, training loop, evaluation             | Model nhận diện số tự vẽ       |
+| 3   | [Nhận diện biển báo giao thông](./03-bien-bao-giao-thong/01-ly-thuyet)     | Data augmentation, transfer learning, phân tích lỗi | App nhận diện 43 loại biển báo |
 
 Ba project mở rộng, học sau khi xong 3 project đầu (scope chi tiết ở phần bên dưới):
 
@@ -73,17 +88,19 @@ Ba project mở rộng, học sau khi xong 3 project đầu (scope chi tiết �
 | ------------------ | --------------------------------------------------------------------------------------------- |
 | Kiến thức đạt được | Ảnh là `ndarray`, BGR/RGB/HSV, histogram, kernel convolution, blur, threshold, Canny, contour |
 | Sản phẩm           | CLI app nhận ảnh đầu vào, áp dụng phép xử lý, xuất kết quả                                    |
+| Demo sẵn           | Các task `p1-*` trong CV Playground                                                           |
 | Không bao gồm      | Machine learning, model, training                                                             |
 
 ### Project 2: Nhận diện chữ số viết tay (MNIST)
 
 **Vì sao học tiếp theo:** MNIST là bài toán kinh điển để học toàn bộ pipeline deep learning mà không bị vấn đề dữ liệu làm phân tâm. Dataset sạch, có sẵn trong PyTorch, train trên CPU trong vài phút.
 
-| Mục                | Nội dung                                                                                                                               |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Mục                | Nội dung                                                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
 | Kiến thức đạt được | Dataset/DataLoader, tensor, kiến trúc CNN (conv, pooling, linear), loss function, optimizer, training loop, accuracy, confusion matrix |
-| Sản phẩm           | Model đạt ~99% accuracy + script nhận diện chữ số bạn tự vẽ                                                                            |
-| Không bao gồm      | Augmentation, pretrained model (để dành cho Project 3)                                                                                 |
+| Sản phẩm           | Model đạt ~99% accuracy + script nhận diện chữ số bạn tự vẽ                                                                          |
+| Demo sẵn           | Task `p2-digit` trong CV Playground                                                                                                  |
+| Không bao gồm      | Augmentation, pretrained model (để dành cho Project 3)                                                                               |
 
 ### Project 3: Nhận diện biển báo giao thông (GTSRB)
 
@@ -135,8 +152,9 @@ Hoàn thành 3 project đầu, bạn đã có đủ nền để tự triển kha
 ## Cách dùng tài liệu
 
 1. Làm theo thứ tự Project 1 → 2 → 3. Mỗi project có 2 file: `01-ly-thuyet` (giới thiệu + khái niệm) và `02-thuc-hanh` (code, bài tập).
-2. Gõ lại code thay vì copy-paste, chạy từng đoạn và thay đổi tham số để quan sát kết quả.
-3. Làm bài tập cuối mỗi phần trước khi sang phần mới.
+2. Clone [repo](https://github.com/drilabs-org/cv-from-scratch) về máy, code thực hành nằm trong `practices/`. Gõ lại code thay vì copy-paste, chạy từng đoạn và thay đổi tham số để quan sát kết quả.
+3. Muốn xem nhanh sản phẩm đầu ra trước khi code, chạy CV Playground bằng Docker như phần [Tài nguyên đi kèm](#tài-nguyên-đi-kèm).
+4. Làm bài tập cuối mỗi phần trước khi sang phần mới.
 
 > [!TIP]
 > Sau mỗi project, hãy tóm tắt lại bằng lời những gì pipeline làm được. Nếu bạn giải thích được cho người khác, bạn đã thực sự hiểu.
