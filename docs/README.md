@@ -153,7 +153,7 @@ Hoàn thành 3 project đầu, bạn đã có đủ nền để tự triển kha
 
 1. Làm theo thứ tự Project 1 → 2 → 3. Mỗi project có 2 file: `01-ly-thuyet` (giới thiệu + khái niệm) và `02-thuc-hanh` (code, bài tập).
 2. Clone [repo](https://github.com/drilabs-org/cv-from-scratch) về máy, code thực hành nằm trong `practices/`. Gõ lại code thay vì copy-paste, chạy từng đoạn và thay đổi tham số để quan sát kết quả.
-3. Muốn xem nhanh sản phẩm đầu ra trước khi code, chạy CV Playground bằng Docker như phần [Tài nguyên đi kèm](#tài-nguyên-đi-kèm).
+3. Muốn xem nhanh sản phẩm đầu ra trước khi code, chạy CV Playground bằng Docker như phần [Tài nguyên đi kèm](#tai-nguyen-di-kem).
 4. Làm bài tập cuối mỗi phần trước khi sang phần mới.
 
 > [!TIP]
