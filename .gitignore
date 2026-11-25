@@ -1,0 +1,11 @@
+.DS_Store
+.venv/
+__pycache__/
+node_modules/
+site/
+practices/02-mnist-chu-so-viet-tay/data/
+practices/00-practice/02-mnist/data/
+cv-playground/frontend/dist/
+cv-playground/.playwright-cli/
+docs/_html/
+docs/_mdsvr/export-state.json

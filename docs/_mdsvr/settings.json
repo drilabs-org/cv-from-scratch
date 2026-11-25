@@ -1,0 +1,59 @@
+{
+  "$schema": "https://mdsvr.js.org/schema/v2.json",
+  "site": {
+    "title": "AI nhập môn",
+    "description": "Giáo trình và thực hành AI nhập môn",
+    "baseUrl": "https://satoshiman.github.io",
+    "language": "vi"
+  },
+  "appearance": {
+    "defaultTheme": "system",
+    "allowThemeToggle": true,
+    "accentColor": "#0969da",
+    "codeTheme": {
+      "light": "github",
+      "dark": "github-dark"
+    }
+  },
+  "navigation": {
+    "sidebar": {
+      "enabled": true,
+      "autoGenerate": true,
+      "depth": 2,
+      "docsOnly": true,
+      "collapsible": true,
+      "defaultOpen": false
+    },
+    "tocEnabled": true
+  },
+  "search": {
+    "enabled": true
+  },
+  "mdx": {
+    "enabled": true
+  },
+  "files": {
+    "extensions": {
+      "hidden": [
+        "_mdsvr",
+        "settings.json",
+        ".git",
+        ".gitignore",
+        "node_modules",
+        ".DS_Store",
+        "AGENTS.md",
+        "package.json",
+        "package-lock.json"
+      ]
+    }
+  },
+  "seo": {
+    "og": {
+      "enabled": true
+    }
+  },
+  "generate": {
+    "basePath": "/ai-2nd-degree-practices",
+    "outputDir": "_html/public"
+  }
+}
