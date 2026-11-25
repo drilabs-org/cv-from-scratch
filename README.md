@@ -1,12 +1,64 @@
-# AI nhập môn (2nd degree practices)
+# CV nhập môn
 
-| Thư mục         | Nội dung                                                                          |
-| --------------- | --------------------------------------------------------------------------------- |
-| `docs/`         | Giáo trình Markdown, build bằng `mdsvr` và publish lên GitHub Pages               |
-| `practices/`    | Code thực hành theo từng chương (`00-practice`, `01-opencv-co-ban`, ...)          |
-| `cv-playground/`| Web app demo CV (FastAPI + React), build thành image lên GitHub Container Registry |
+Lộ trình tự học Computer Vision qua project thực hành, dành cho người đã biết
+Python nhưng chưa từng làm xử lý ảnh hay machine learning. Mỗi project tạo ra
+một sản phẩm chạy được, độ khó tăng dần từ OpenCV thuần đến huấn luyện mạng
+neuron.
+
+- **Docs site**: https://drilabs-org.github.io/cv-from-scratch/
+- **Docker image**: `ghcr.io/drilabs-org/cv-from-scratch/cv-playground`
+
+## Cấu trúc
+
+| Thư mục          | Nội dung                                                                        |
+| ---------------- | ------------------------------------------------------------------------------- |
+| `docs/`          | Giáo trình Markdown (3 chương), build bằng `mdsvr`, deploy lên GitHub Pages     |
+| `practices/`     | Code thực hành theo từng chương (`01-opencv-co-ban`, `02-mnist-chu-so-viet-tay`, `03-bien-bao-giao-thong`) |
+| `cv-playground/` | Web app demo các bài tập CV (FastAPI + React), đóng gói Docker                  |
+| `_scripts/`      | Script hỗ trợ export docs (`fix-basepath.mjs`)                                  |
+| `.github/`       | CI/CD: deploy docs lên Pages, build và push Docker image lên GHCR               |
+
+## Chạy docs local
 
 ```bash
-mdsvr docs                                  # xem docs local
-docker run -p 8000:8000 ghcr.io/<owner>/<repo>/cv-playground:latest
+npx mdsvr docs            # xem docs tại localhost
+npm run export            # export static site ra docs/_html/public
 ```
+
+## Chạy cv-playground
+
+Bằng Docker (khuyên dùng):
+
+```bash
+docker run -p 8000:8000 ghcr.io/drilabs-org/cv-from-scratch/cv-playground:latest
+# mở http://localhost:8000
+```
+
+Hoặc chạy dev local (backend :8000 + frontend :5173):
+
+```bash
+cd cv-playground
+./dev.sh
+```
+
+Chi tiết kiến trúc và cách thêm task mới: `cv-playground/README.md`.
+
+## Release
+
+Hai workflow trong `.github/workflows/`:
+
+| Workflow     | Trigger                    | Kết quả                                       |
+| ------------ | -------------------------- | --------------------------------------------- |
+| `docs.yml`   | push `main` (thay đổi `docs/`) | Deploy docs site lên GitHub Pages             |
+| `docker.yml` | push tag `v*`              | Build và push image lên GHCR (`latest`, semver, `sha-*`) |
+
+Để release image mới:
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+## License
+
+MIT, xem [LICENSE](LICENSE).
