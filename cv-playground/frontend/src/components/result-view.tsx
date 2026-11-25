@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react'
-import { ProportionsIcon, TimerIcon } from 'lucide-react'
+import {
+  InfoIcon,
+  ProportionsIcon,
+  TimerIcon,
+  TriangleAlertIcon,
+} from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -305,6 +310,26 @@ export function ResultView({
         )}
         </div>
       </div>
+
+      {result?.runtime && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={cn(
+            'flex items-start gap-2 rounded-lg border px-3 py-2 text-sm',
+            result.runtime.fallback
+              ? 'border-amber-500/40 bg-amber-500/5 text-amber-900 dark:text-amber-200'
+              : 'border-border bg-muted/40 text-muted-foreground',
+          )}
+        >
+          {result.runtime.fallback ? (
+            <TriangleAlertIcon className="mt-0.5 size-4 shrink-0" />
+          ) : (
+            <InfoIcon className="mt-0.5 size-4 shrink-0" />
+          )}
+          <span>{result.runtime.message}</span>
+        </div>
+      )}
 
       {imageUri && dataEntries.length > 0 && <Separator />}
       {dataEntries.length > 0 && (

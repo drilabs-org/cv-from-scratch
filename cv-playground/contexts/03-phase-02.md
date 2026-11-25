@@ -151,4 +151,5 @@ Same as phases 0-1 (convention 10):
 - Blank input returns the degenerate 28x28 plus `data.note = "no digit detected"` (option chosen: note).
 - `digit.png` example generated from MNIST test image 0 (a 7); appended to `EXAMPLES` after the p1 samples.
 - `p2-*` uses the generic sidebar icon (no `ICON_RULES` change).
+- Optional `CV_MODELS_DIR` uses `<dir>/mnist_cnn.pt` when present; otherwise the bundled model is used with a UI notice. Invalid custom weights produce a visible task error. Runtime source metadata is separate from prediction data.
 - Verified end-to-end: `digit.png` -> 7 @ 99.8%; inverted (dark-on-light) copy -> still 7 @ 99.8% via `invert=auto`; blank -> note; first call ~2 s, later ~40 ms.

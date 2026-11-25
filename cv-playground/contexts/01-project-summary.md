@@ -76,10 +76,10 @@ cv-playground/
 
 - `GET /health` -> `{"status": "ok"}`
 - `GET /api/tasks` -> list of task metadata dicts (see schema below).
-- `POST /api/tasks/{task_id}`: `multipart/form-data` with `file` (image) + `params` (JSON string). Returns `{"image": base64 PNG | null, "data": {...}}`.
+- `POST /api/tasks/{task_id}`: `multipart/form-data` with `file` (image) + `params` (JSON string). Returns `{"image": base64 PNG | null, "data": {...}}`, with optional `runtime` metadata for tasks that report runtime choices such as model source.
 - Errors: unknown `task_id` -> 404; file not decodable as image -> 400; params failing validation -> 422 with the reason.
 - The backend mounts `frontend/dist` at `/` when the directory exists (production/demo mode); in dev, Vite on :5173 proxies `/api` -> :8000.
-- `TaskHandler` signature: `(img_bgr: np.ndarray, params: dict) -> (np.ndarray | None, dict)`. Images are BGR ndarrays; `params` arrives already coerced (defaults applied, int/float cast, min/max/select options enforced by `coerce_params`).
+- `TaskHandler` signature: `(img_bgr: np.ndarray, params: dict) -> (np.ndarray | None, dict)`. A task may also register a `runtime_info` provider; its result is returned separately from user-facing task data. Images are BGR ndarrays; `params` arrives already coerced (defaults applied, int/float cast, min/max/select options enforced by `coerce_params`).
 
 ## Task metadata schema (implemented)
 
@@ -138,6 +138,7 @@ As built:
 - `app/cvlib/mnist.py`: `DigitCNN` (225,034 params), `preprocess(img, invert, pad)` (Otsu INV + polarity check + crop + square pad + 28x28), `load_model` (CPU, `weights_only=True`), `predict` (MNIST normalize + softmax top-3).
 - `app/cvlib/train.py`: standalone trainer, MNIST auto-downloaded to `cvlib/data/`, saves `cvlib/models/mnist_cnn.pt` (0.9 MB). Actual run: 3 epochs CPU, test acc **98.98%**. `--device` defaults to `cpu` because torch 2.15 MPS crashes on macOS 14 (`-[MPSNDArray arrayViewWithShape:]` abort).
 - `backend/app/tasks/p2_mnist.py`: lazy `_get_model()` (torch import + weight load deferred to first call, cached at module level). Params: `invert` select auto/always/never (main) + `pad` int 0-60 default 20 (group "Preprocess"). `output="image+data"`, `result_tab="output"`. Blank input returns `data.note = "no digit detected"`.
+- Optional `CV_MODELS_DIR` selects `<dir>/mnist_cnn.pt` before the bundled weights; a missing custom file falls back with `runtime` metadata shown in the shared result UI. An unreadable or incompatible file returns a visible task error. Model source is cached with the model.
 - Frontend: `ConfidenceBars` renderer in `result-view.tsx`, keyed on the `{label, prob}` data shape (reused by `p3-sign` later); `digit.png` (a real MNIST test 7) added to `EXAMPLES`.
 - `torch==2.15.0` + `torchvision==0.29.2` pinned in `requirements.txt` (torch 2.15 supports Python 3.14).
 - Docs triple `p2-digit.md` / `.vi.md` / `.spec.md` including the training procedure and measured results.

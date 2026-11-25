@@ -102,6 +102,19 @@ x = (x - 0.1307) / 0.3081                               # == Normalize
 - `backend/app/cvlib/models/mnist_cnn.pt`: a 0.9 MB `state_dict` for `DigitCNN`.
 - Loaded lazily on the first task call (`map_location="cpu"`, `weights_only=True`) and cached at module level: the first request pays the torch import (~1-3 s), later ones are instant. CPU only; the model is tiny and CPU inference is deterministic.
 
+### Use your own trained weights
+
+Set `CV_MODELS_DIR` to a directory containing `mnist_cnn.pt`. The task uses
+that file when present; otherwise it falls back to the bundled weights and the
+result view says why. A custom file that exists but cannot be loaded or does
+not match the expected architecture produces a visible error; it does not
+silently fall back.
+
+The custom file must be a `DigitCNN` `state_dict` with the same preprocessing,
+MNIST normalization constants, and 10 output classes. Training stays outside
+the app. The selected source is shown after a successful run; restart the app
+after replacing weights because the loaded model is cached.
+
 ## Training (already done outside the app)
 
 `backend/app/cvlib/train.py`: MNIST train split (60,000 images, auto-downloaded to `backend/app/cvlib/data/`), `CrossEntropyLoss`, `Adam(lr=0.001)`, batch 64, 3 epochs on CPU (~1 minute). Actual run:

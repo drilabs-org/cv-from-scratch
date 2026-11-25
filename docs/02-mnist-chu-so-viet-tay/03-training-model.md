@@ -214,6 +214,38 @@ print(predict(model, img28))
 
 Nếu load được và predict đúng, pipeline train → lưu → load → inference đã khép kín. Đây mới là bài test thật của quá trình train, chứ không phải con số accuracy. File `models/mnist_cnn.pt` vừa sinh ra cũng chính là file task `p2-digit` trong CV Playground nạp lên khi chạy, nên train xong là web app dùng được model mới ngay.
 
+## Dùng model tự train trong CV Playground
+
+Không cần chép đè weights mặc định trong repo. Hãy lưu model vào một thư mục
+riêng bên ngoài, rồi trỏ `CV_MODELS_DIR` tới thư mục đó. App ưu tiên
+`<CV_MODELS_DIR>/mnist_cnn.pt`; nếu chưa cấu hình hoặc file chưa tồn tại, task
+`p2-digit` tự dùng weights mặc định đi kèm app. UI hiển thị rõ model custom,
+model mặc định, hoặc lý do fallback sau khi chạy task.
+
+Ví dụ chạy local từ thư mục `cv-playground/`:
+
+```bash
+mkdir -p "$HOME/cv-models"
+.venv/bin/python backend/app/cvlib/train.py \
+  --out "$HOME/cv-models/mnist_cnn.pt"
+CV_MODELS_DIR="$HOME/cv-models" ./dev.sh
+```
+
+Ví dụ chạy Docker với cùng thư mục đã train:
+
+```bash
+docker run --rm -p 8000:8000 \
+  --mount "type=bind,src=$HOME/cv-models,dst=/models,readonly" \
+  -e CV_MODELS_DIR=/models \
+  ghcr.io/drilabs-org/cv-from-scratch/cv-playground:latest
+```
+
+File cần là `state_dict` của đúng kiến trúc `DigitCNN` trong
+`backend/app/cvlib/mnist.py`, có 10 đầu ra và được train với preprocessing /
+normalization tương thích. Nếu file custom có mặt nhưng hỏng hoặc không khớp,
+app báo lỗi trên UI thay vì âm thầm dùng model mặc định. Model chỉ load ở lần
+gọi đầu và được cache; sau khi thay file, restart app để nạp weights mới.
+
 ## Bước 5: Thử nghiệm (quan trọng nhất để học)
 
 `train.py` nhận tham số, đừng ngại vặn:

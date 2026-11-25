@@ -11,6 +11,11 @@ TaskHandler = Callable[
     [np.ndarray, dict[str, Any]],
     "tuple[np.ndarray | None, dict[str, Any]]",
 ]
+RuntimeInfoProvider = Callable[[], dict[str, Any] | None]
+
+
+class TaskExecutionError(Exception):
+    """An expected task failure that can be shown to the user."""
 
 
 @dataclass
@@ -26,6 +31,7 @@ class Task:
     result_tab: str = "auto"  # "auto" | "input" | "compare" | "output"
     docs: dict[str, str] = field(default_factory=dict)  # lang -> markdown
     docs_path: Path | None = None
+    runtime_info: RuntimeInfoProvider | None = None
 
     def metadata(self) -> dict:
         # re-read the .md files on every request so docs edits need no restart
@@ -61,6 +67,7 @@ def register_task(
     output: str = "image",
     result_tab: str = "auto",
     docs: str | Path = "",
+    runtime_info: RuntimeInfoProvider | None = None,
 ):
     def deco(fn: TaskHandler) -> TaskHandler:
         docs_path = docs if isinstance(docs, Path) else None
@@ -76,6 +83,7 @@ def register_task(
             result_tab=result_tab,
             docs=_load_docs(docs),
             docs_path=docs_path,
+            runtime_info=runtime_info,
         )
         return fn
 

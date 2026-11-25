@@ -12,7 +12,7 @@ Companion to `01-project-summary.md`. That file is the contract; this one logs h
 ### What was built
 
 - Backend `backend/app/`: `main.py` (3 endpoints), `registry.py` (`Task` dataclass, `TASKS` dict, `register_task` decorator, `coerce_params`), `tasks/` package.
-- Endpoints: `GET /health`, `GET /api/tasks`, `POST /api/tasks/{task_id}` (multipart `file` + `params` JSON -> `{image: base64 PNG | null, data}`).
+- Endpoints: `GET /health`, `GET /api/tasks`, `POST /api/tasks/{task_id}` (multipart `file` + `params` JSON -> `{image: base64 PNG | null, data}`, optionally with separate `runtime` metadata).
 - Static mount of `frontend/dist` at `/` only if the directory exists, so the backend runs fine before the first frontend build.
 - `coerce_params` validates server-side (defaults, int/float cast, min/max, select options) -> 422 on failure. Handlers never see raw strings.
 - Frontend: React 19 + Vite 8 + TypeScript, Tailwind 4 via `@tailwindcss/vite` (CSS-first, no `tailwind.config`), shadcn `base-nova` on `@base-ui/react`, `lucide-react` icons, `oxlint` for lint.

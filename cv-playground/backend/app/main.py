@@ -7,7 +7,7 @@ import numpy as np
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.staticfiles import StaticFiles
 
-from app.registry import TASKS, coerce_params
+from app.registry import TASKS, TaskExecutionError, coerce_params
 from app.tasks import p1_opencv  # noqa: F401  # imported to register tasks
 from app.tasks import p2_mnist  # noqa: F401  # imported to register tasks
 
@@ -44,7 +44,10 @@ async def run_task(
     except (json.JSONDecodeError, ValueError) as e:
         raise HTTPException(422, f"invalid params: {e}")
 
-    out_img, data = task.handler(img, values)
+    try:
+        out_img, data = task.handler(img, values)
+    except TaskExecutionError as e:
+        raise HTTPException(500, str(e)) from e
 
     encoded = None
     if out_img is not None:
@@ -52,7 +55,12 @@ async def run_task(
         if not ok:
             raise HTTPException(500, "failed to encode output image")
         encoded = base64.b64encode(buf.tobytes()).decode()
-    return {"image": encoded, "data": data}
+    result = {"image": encoded, "data": data}
+    if task.runtime_info is not None:
+        runtime_info = task.runtime_info()
+        if runtime_info is not None:
+            result["runtime"] = runtime_info
+    return result
 
 
 FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"

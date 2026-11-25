@@ -41,7 +41,9 @@ cd cv-playground
 ./dev.sh
 ```
 
-Chi tiết kiến trúc và cách thêm task mới: `cv-playground/README.md`.
+Muốn dùng weights MNIST tự train, có thể mount thư mục model vào app; hướng dẫn
+nằm trong [CV Playground README](cv-playground/README.md#use-custom-mnist-weights).
+Chi tiết kiến trúc và cách thêm task mới cũng xem tại đó.
 
 ## Release
 

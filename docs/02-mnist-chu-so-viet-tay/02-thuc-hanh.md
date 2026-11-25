@@ -47,6 +47,11 @@ pip install -r requirements.txt
 pip install matplotlib scikit-learn
 ```
 
+Muốn dùng model tự train thay cho weights mặc định, xem hướng dẫn
+[kết nối model với CV Playground](./03-training-model#dung-model-tu-train-trong-cv-playground).
+App đọc `mnist_cnn.pt` từ thư mục được cấu hình bằng `CV_MODELS_DIR`; nếu không
+có cấu hình hoặc chưa có file, app dùng model mặc định và báo rõ trên UI.
+
 Vai trò từng package:
 
 | Package | Vai trò |
