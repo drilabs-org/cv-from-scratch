@@ -45,6 +45,38 @@ cd frontend && npm run build
 # open http://localhost:8000
 ```
 
+## Use custom MNIST weights
+
+The `p2-digit` task uses `backend/app/cvlib/models/mnist_cnn.pt` by default.
+To try weights trained outside the app, put a compatible `mnist_cnn.pt` in a
+directory and set `CV_MODELS_DIR` to that directory. The custom file takes
+precedence; if the directory or file is missing, the bundled model is used and
+the result view explains the fallback. A present but invalid or incompatible
+file fails visibly instead of silently switching models.
+
+For local development, from `cv-playground/`:
+
+```bash
+mkdir -p "$HOME/cv-models"
+.venv/bin/python backend/app/cvlib/train.py \
+  --out "$HOME/cv-models/mnist_cnn.pt"
+CV_MODELS_DIR="$HOME/cv-models" ./dev.sh
+```
+
+For Docker, mount the host directory read-only:
+
+```bash
+docker run --rm -p 8000:8000 \
+  --mount "type=bind,src=$HOME/cv-models,dst=/models,readonly" \
+  -e CV_MODELS_DIR=/models \
+  ghcr.io/drilabs-org/cv-from-scratch/cv-playground:latest
+```
+
+The file must be a `DigitCNN` `state_dict` with the same input preprocessing,
+normalization, and 10 output classes as the bundled model. The selected model
+is loaded lazily and cached, so restart the app after replacing the file.
+`p2-digit` shows which model source it used after a successful run.
+
 Auto-generated API docs: http://localhost:8000/docs
 
 ## Adding a new task

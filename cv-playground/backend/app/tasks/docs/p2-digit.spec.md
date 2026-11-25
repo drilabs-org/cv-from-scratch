@@ -12,6 +12,18 @@ Demo reference: I/O contract, controls, safe ranges, and symptom fixes. Theory a
 - **Result tab**: `output` (set explicitly), because the preprocessed view is the debugging surface.
 - **Model**: `backend/app/cvlib/models/mnist_cnn.pt` (`DigitCNN` state_dict, 0.9 MB), loaded lazily on first call and cached; CPU only. First request is slow (torch import + weight load), later ones are fast.
 
+## Model selection
+
+Set `CV_MODELS_DIR` to a directory containing `mnist_cnn.pt` to override the
+bundled model. If the variable is unset or the file is missing, the bundled
+model is used and the result view reports that choice. If a custom file exists
+but is unreadable or incompatible, the task fails and the UI displays the
+backend error; it does not silently fall back.
+
+The custom artifact must be a `DigitCNN` `state_dict` with the same input
+preprocessing, MNIST normalization, and 10 output classes. Model loading is
+lazy and cached; restart the app after replacing the file.
+
 ## Parameters
 
 | Param | Label | Type | Range | Default | Location | Pipeline stage |

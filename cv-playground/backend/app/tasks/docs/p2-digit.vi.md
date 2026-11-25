@@ -102,6 +102,19 @@ x = (x - 0.1307) / 0.3081                               # == Normalize
 - `backend/app/cvlib/models/mnist_cnn.pt`: `state_dict` 0.9 MB của `DigitCNN`.
 - Load lazy ở lần gọi task đầu tiên (`map_location="cpu"`, `weights_only=True`) và cache ở module level: request đầu trả giá import torch (~1-3 s), các request sau nhanh. Chỉ CPU; model nhỏ và inference trên CPU deterministic.
 
+### Dùng weights tự train
+
+Đặt biến môi trường `CV_MODELS_DIR` trỏ tới thư mục có file
+`mnist_cnn.pt`. Task ưu tiên file này nếu tìm thấy; nếu chưa cấu hình hoặc
+chưa có file, app dùng weights mặc định đi kèm và UI thông báo lý do. Nếu file
+custom tồn tại nhưng bị lỗi hoặc không tương thích, app báo lỗi rõ ràng, không
+âm thầm fallback.
+
+File phải là `state_dict` của đúng kiến trúc `DigitCNN`, cùng preprocessing,
+MNIST normalization và 10 lớp đầu ra. Việc train vẫn chạy bên ngoài app. UI
+hiển thị nguồn model sau khi chạy thành công; model đã load được cache nên cần
+restart app sau khi thay file weights.
+
 ## Training (đã chạy sẵn ngoài app)
 
 `backend/app/cvlib/train.py`: MNIST train split (60,000 ảnh, tự tải về `backend/app/cvlib/data/`), `CrossEntropyLoss`, `Adam(lr=0.001)`, batch 64, 3 epoch trên CPU (~1 phút). Kết quả chạy thật:

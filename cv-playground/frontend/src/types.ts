@@ -25,4 +25,9 @@ export interface TaskMeta {
 export interface TaskResult {
   image: string | null
   data: Record<string, unknown>
+  runtime?: {
+    source: 'custom' | 'bundled'
+    fallback: boolean
+    message: string
+  }
 }
