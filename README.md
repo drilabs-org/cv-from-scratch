@@ -15,7 +15,6 @@ neuron.
 | `docs/`          | Giáo trình Markdown (3 chương), build bằng `mdsvr`, deploy lên GitHub Pages     |
 | `practices/`     | Code thực hành theo từng chương (`01-opencv-co-ban`, `02-mnist-chu-so-viet-tay`, `03-bien-bao-giao-thong`) |
 | `cv-playground/` | Web app demo các bài tập CV (FastAPI + React), đóng gói Docker                  |
-| `_scripts/`      | Script hỗ trợ export docs (`fix-basepath.mjs`)                                  |
 | `.github/`       | CI/CD: deploy docs lên Pages, build và push Docker image lên GHCR               |
 
 ## Chạy docs local

@@ -3,9 +3,8 @@
     "version": "1.0.0",
     "private": true,
     "scripts": {
-        "validate": "npx mdsvr@2.7.0 docs --validate-md",
-        "export": "npx mdsvr@2.7.0 docs --export",
-        "postexport": "node _scripts/fix-basepath.mjs",
+        "validate": "npx mdsvr@2.8.0 docs --validate-md",
+        "export": "npx mdsvr@2.8.0 docs --export",
         "deploy": "npm run export && echo 'Site exported to docs/_html/public. Push to main to deploy via GitHub Pages.'"
     }
 }
